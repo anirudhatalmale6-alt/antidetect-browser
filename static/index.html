@@ -1,0 +1,1610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AntiDetect - Browser Profile Manager</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0f1017;
+  --card: #1a1b23;
+  --card-hover: #1f2029;
+  --border: #27272a;
+  --accent: #7c3aed;
+  --accent-light: #a78bfa;
+  --accent-glow: rgba(124, 58, 237, 0.15);
+  --success: #22c55e;
+  --error: #ef4444;
+  --warning: #f59e0b;
+  --text: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+  --sidebar-w: 220px;
+  --header-h: 56px;
+  --radius: 10px;
+  --radius-sm: 6px;
+  --transition: 0.2s ease;
+}
+
+html { font-size: 14px; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #3f3f46; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #52525b; }
+
+/* ========== HEADER ========== */
+.header {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  height: var(--header-h);
+  background: linear-gradient(135deg, #18181b 0%, #1a1b23 100%);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 24px;
+  backdrop-filter: blur(12px);
+}
+
+.header-left { display: flex; align-items: center; gap: 12px; }
+
+.logo {
+  font-size: 1.35rem; font-weight: 700; letter-spacing: -0.5px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.logo-sub {
+  font-size: 0.78rem; color: var(--text-muted); font-weight: 400;
+  border-left: 1px solid var(--border); padding-left: 12px; margin-left: 4px;
+}
+
+.header-stats {
+  display: flex; align-items: center; gap: 20px;
+}
+
+.stat-pill {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(124, 58, 237, 0.08);
+  border: 1px solid rgba(124, 58, 237, 0.15);
+  padding: 5px 12px; border-radius: 20px;
+  font-size: 0.82rem; color: var(--text-secondary);
+}
+
+.stat-pill .num { color: var(--text); font-weight: 600; }
+
+/* ========== SIDEBAR ========== */
+.sidebar {
+  position: fixed; top: var(--header-h); left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: #131318;
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  z-index: 90;
+  transition: transform var(--transition);
+}
+
+.sidebar-header {
+  padding: 16px 14px 8px;
+  font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1.2px;
+  color: var(--text-muted); font-weight: 600;
+}
+
+.folder-list {
+  flex: 1; overflow-y: auto; padding: 0 8px;
+}
+
+.folder-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 10px; border-radius: var(--radius-sm);
+  cursor: pointer; transition: all var(--transition);
+  color: var(--text-secondary); font-size: 0.9rem;
+  margin-bottom: 2px; user-select: none;
+  position: relative;
+}
+
+.folder-item:hover { background: rgba(255,255,255,0.04); color: var(--text); }
+.folder-item.active { background: var(--accent-glow); color: var(--accent-light); }
+.folder-item.active .folder-icon { color: var(--accent); }
+
+.folder-icon { font-size: 1rem; width: 20px; text-align: center; flex-shrink: 0; }
+.folder-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-count {
+  font-size: 0.75rem; color: var(--text-muted);
+  background: rgba(255,255,255,0.05); padding: 1px 7px;
+  border-radius: 10px; min-width: 22px; text-align: center;
+}
+
+.folder-actions {
+  display: none; gap: 2px; position: absolute; right: 6px;
+}
+
+.folder-item:hover .folder-actions { display: flex; }
+.folder-item:hover .folder-count { display: none; }
+
+.folder-action-btn {
+  background: none; border: none; color: var(--text-muted);
+  cursor: pointer; padding: 2px 4px; border-radius: 3px;
+  font-size: 0.8rem; line-height: 1;
+}
+.folder-action-btn:hover { color: var(--text); background: rgba(255,255,255,0.08); }
+.folder-action-btn.del:hover { color: var(--error); }
+
+.sidebar-footer { padding: 12px; border-top: 1px solid var(--border); }
+
+.new-folder-btn {
+  width: 100%; padding: 8px; border-radius: var(--radius-sm);
+  border: 1px dashed #3f3f46; background: transparent;
+  color: var(--text-secondary); cursor: pointer; font-size: 0.85rem;
+  transition: all var(--transition);
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.new-folder-btn:hover {
+  border-color: var(--accent); color: var(--accent-light);
+  background: var(--accent-glow);
+}
+
+/* ========== MAIN CONTENT ========== */
+.main {
+  margin-left: var(--sidebar-w);
+  margin-top: var(--header-h);
+  min-height: calc(100vh - var(--header-h));
+  padding: 20px 24px 40px;
+}
+
+/* Action Bar */
+.action-bar {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 20px; flex-wrap: wrap;
+}
+
+.search-wrap {
+  position: relative; flex: 1; min-width: 200px; max-width: 340px;
+}
+
+.search-wrap svg {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  color: var(--text-muted); pointer-events: none; width: 16px; height: 16px;
+}
+
+.search-input {
+  width: 100%; padding: 9px 12px 9px 36px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text);
+  font-size: 0.9rem; outline: none;
+  transition: border-color var(--transition);
+}
+.search-input::placeholder { color: var(--text-muted); }
+.search-input:focus { border-color: var(--accent); }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 16px; border-radius: var(--radius-sm);
+  font-size: 0.88rem; font-weight: 500; cursor: pointer;
+  border: 1px solid transparent; transition: all var(--transition);
+  white-space: nowrap; text-decoration: none; line-height: 1.2;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent) 0%, #6d28d9 100%);
+  color: #fff; border: none;
+  box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+}
+.btn-primary:hover {
+  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn-outline {
+  background: transparent; border-color: var(--border); color: var(--text-secondary);
+}
+.btn-outline:hover { border-color: #52525b; color: var(--text); background: rgba(255,255,255,0.03); }
+.btn-outline.active { border-color: var(--accent); color: var(--accent-light); background: var(--accent-glow); }
+
+.btn-sm { padding: 6px 10px; font-size: 0.8rem; }
+.btn-icon { padding: 8px 10px; }
+
+.action-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+.sort-select {
+  padding: 8px 30px 8px 10px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text-secondary);
+  font-size: 0.85rem; outline: none; cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+.sort-select:focus { border-color: var(--accent); }
+
+.view-toggle { display: flex; border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.view-btn {
+  padding: 7px 10px; background: transparent; border: none;
+  color: var(--text-muted); cursor: pointer; transition: all var(--transition);
+  display: flex; align-items: center;
+}
+.view-btn:first-child { border-right: 1px solid var(--border); }
+.view-btn:hover { color: var(--text); }
+.view-btn.active { background: var(--accent-glow); color: var(--accent-light); }
+
+/* ========== PROFILE GRID ========== */
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 14px;
+}
+
+.profile-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  transition: all var(--transition);
+  position: relative;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.profile-card:hover {
+  border-color: #3f3f46;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+}
+
+.profile-card-header { display: flex; align-items: flex-start; gap: 10px; }
+
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  margin-top: 6px; flex-shrink: 0;
+}
+.status-dot.ready { background: var(--success); box-shadow: 0 0 6px rgba(34,197,94,0.5); }
+.status-dot.running { background: var(--warning); box-shadow: 0 0 6px rgba(245,158,11,0.5); animation: pulse 2s infinite; }
+.status-dot.stopped { background: #52525b; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.profile-name { font-weight: 600; font-size: 1rem; color: var(--text); flex: 1; line-height: 1.3; }
+
+.profile-status-label {
+  font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px;
+  padding: 2px 8px; border-radius: 10px; font-weight: 600;
+}
+.profile-status-label.ready { background: rgba(34,197,94,0.1); color: var(--success); }
+.profile-status-label.running { background: rgba(245,158,11,0.1); color: var(--warning); }
+.profile-status-label.stopped { background: rgba(82,82,91,0.2); color: var(--text-muted); }
+
+.profile-proxy {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.78rem; color: var(--text-muted);
+  background: rgba(255,255,255,0.03);
+  padding: 5px 8px; border-radius: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.profile-proxy.none { font-style: italic; font-family: inherit; }
+
+.profile-fingerprint {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+
+.fp-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.78rem; color: var(--text-secondary);
+  background: rgba(255,255,255,0.04);
+  padding: 3px 8px; border-radius: 4px;
+}
+.fp-tag svg { width: 12px; height: 12px; }
+
+.profile-notes {
+  font-size: 0.8rem; color: var(--text-muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-style: italic;
+}
+
+.profile-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: auto; padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+
+.folder-tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.75rem; color: var(--text-muted);
+  background: rgba(124, 58, 237, 0.08);
+  padding: 3px 8px; border-radius: 4px;
+}
+
+.card-actions { display: flex; gap: 6px; }
+
+.card-btn {
+  padding: 6px 10px; border-radius: var(--radius-sm);
+  border: none; cursor: pointer; font-size: 0.78rem;
+  font-weight: 500; transition: all var(--transition);
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.card-btn.launch { background: rgba(34,197,94,0.12); color: var(--success); }
+.card-btn.launch:hover { background: rgba(34,197,94,0.22); }
+.card-btn.edit { background: rgba(59,130,246,0.12); color: #60a5fa; }
+.card-btn.edit:hover { background: rgba(59,130,246,0.22); }
+.card-btn.delete { background: rgba(239,68,68,0.08); color: #f87171; }
+.card-btn.delete:hover { background: rgba(239,68,68,0.18); }
+
+/* ========== LIST VIEW ========== */
+.profile-list { display: flex; flex-direction: column; gap: 4px; }
+
+.profile-list .profile-row {
+  display: grid;
+  grid-template-columns: 8px 1.5fr 1.2fr 1fr 0.6fr 0.6fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: all var(--transition);
+}
+.profile-list .profile-row:hover {
+  border-color: #3f3f46;
+  background: var(--card-hover);
+}
+
+.profile-list .profile-name { font-size: 0.9rem; }
+.profile-list .profile-proxy { background: none; padding: 0; font-size: 0.78rem; }
+
+.list-header {
+  display: grid;
+  grid-template-columns: 8px 1.5fr 1.2fr 1fr 0.6fr 0.6fr auto;
+  gap: 12px; padding: 8px 16px;
+  font-size: 0.75rem; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
+}
+
+/* ========== MODALS ========== */
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(0,0,0,0.6);
+  backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; visibility: hidden;
+  transition: all 0.25s ease;
+}
+.modal-overlay.show { opacity: 1; visibility: visible; }
+
+.modal {
+  background: #18181b;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 95%; max-width: 580px;
+  max-height: 90vh; overflow-y: auto;
+  transform: translateY(20px) scale(0.97);
+  transition: transform 0.25s ease;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.4);
+}
+.modal-overlay.show .modal { transform: translateY(0) scale(1); }
+
+.modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px; border-bottom: 1px solid var(--border);
+}
+.modal-title { font-size: 1.1rem; font-weight: 600; }
+
+.modal-close {
+  background: none; border: none; color: var(--text-muted);
+  cursor: pointer; padding: 4px; border-radius: 4px;
+  font-size: 1.2rem; line-height: 1;
+  transition: all var(--transition);
+}
+.modal-close:hover { color: var(--text); background: rgba(255,255,255,0.08); }
+
+.modal-body { padding: 22px; }
+.modal-footer {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 16px 22px; border-top: 1px solid var(--border);
+}
+
+/* Form Styles */
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block; margin-bottom: 6px;
+  font-size: 0.82rem; font-weight: 500; color: var(--text-secondary);
+}
+.form-row { display: flex; gap: 12px; }
+.form-row .form-group { flex: 1; }
+
+.form-input, .form-select, .form-textarea {
+  width: 100%; padding: 9px 12px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); color: var(--text);
+  font-size: 0.9rem; font-family: inherit;
+  outline: none; transition: border-color var(--transition);
+}
+.form-input:focus, .form-select:focus, .form-textarea:focus { border-color: var(--accent); }
+.form-textarea { resize: vertical; min-height: 60px; }
+.form-select { cursor: pointer; appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23a1a1aa' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+  padding-right: 30px;
+}
+
+.form-hint { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+
+.preset-chips { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.preset-chip {
+  padding: 4px 10px; border-radius: 4px;
+  background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+  color: var(--text-secondary); cursor: pointer; font-size: 0.78rem;
+  transition: all var(--transition);
+}
+.preset-chip:hover { border-color: var(--accent); color: var(--accent-light); }
+.preset-chip.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent-light); }
+
+/* Collapsible */
+.collapsible-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 0; cursor: pointer; user-select: none;
+  border-top: 1px solid var(--border); margin-top: 8px;
+}
+.collapsible-header h4 { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); }
+.collapsible-arrow {
+  transition: transform 0.2s; color: var(--text-muted); font-size: 0.8rem;
+}
+.collapsible-header.open .collapsible-arrow { transform: rotate(180deg); }
+.collapsible-body { overflow: hidden; max-height: 0; transition: max-height 0.3s ease; }
+.collapsible-body.open { max-height: 600px; }
+.collapsible-inner { padding-bottom: 8px; }
+
+.fp-readonly {
+  display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px;
+  padding: 10px; background: rgba(255,255,255,0.02);
+  border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.05);
+}
+.fp-item { font-size: 0.8rem; }
+.fp-item span { color: var(--text-muted); }
+.fp-item strong { color: var(--text-secondary); font-weight: 500; }
+
+.btn-regen {
+  margin-top: 10px; padding: 7px 14px;
+  background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.25);
+  border-radius: var(--radius-sm); color: var(--accent-light);
+  cursor: pointer; font-size: 0.82rem; transition: all var(--transition);
+}
+.btn-regen:hover { background: rgba(124,58,237,0.2); }
+
+/* Launch modal */
+.launch-steps { list-style: none; counter-reset: steps; }
+.launch-steps li {
+  counter-increment: steps; position: relative;
+  padding: 10px 0 10px 40px; font-size: 0.9rem; color: var(--text-secondary);
+}
+.launch-steps li::before {
+  content: counter(steps);
+  position: absolute; left: 0; top: 10px;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--accent-glow); border: 1px solid rgba(124,58,237,0.3);
+  color: var(--accent-light); display: flex; align-items: center; justify-content: center;
+  font-size: 0.78rem; font-weight: 600;
+}
+.launch-steps li + li { border-top: 1px solid rgba(255,255,255,0.05); }
+
+.launch-cmd {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 12px;
+  margin-top: 6px; font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 0.82rem; color: var(--accent-light);
+  word-break: break-all;
+}
+.launch-cmd code { flex: 1; }
+
+.copy-btn {
+  flex-shrink: 0; background: rgba(124,58,237,0.12); border: none;
+  color: var(--accent-light); padding: 5px 10px; border-radius: 4px;
+  cursor: pointer; font-size: 0.78rem; transition: all var(--transition);
+}
+.copy-btn:hover { background: rgba(124,58,237,0.25); }
+
+/* Confirm dialog */
+.confirm-body { text-align: center; padding: 10px 0; }
+.confirm-body p { color: var(--text-secondary); margin-bottom: 4px; }
+.confirm-body .name { color: var(--text); font-weight: 600; }
+
+/* ========== TOAST ========== */
+.toast-container {
+  position: fixed; top: calc(var(--header-h) + 12px); right: 16px;
+  z-index: 300; display: flex; flex-direction: column; gap: 8px;
+}
+.toast {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; border-radius: var(--radius-sm);
+  background: #1e1e24; border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  min-width: 280px; max-width: 380px;
+  animation: toastIn 0.3s ease forwards;
+  font-size: 0.88rem;
+}
+.toast.removing { animation: toastOut 0.3s ease forwards; }
+.toast-icon { font-size: 1.1rem; flex-shrink: 0; }
+.toast.success .toast-icon { color: var(--success); }
+.toast.error .toast-icon { color: var(--error); }
+.toast.info .toast-icon { color: var(--accent-light); }
+.toast-msg { flex: 1; color: var(--text-secondary); }
+
+@keyframes toastIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes toastOut { from { opacity: 1; transform: translateX(0); } to { opacity: 0; transform: translateX(40px); } }
+
+/* ========== SPINNER ========== */
+.spinner {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,0.1);
+  border-top-color: var(--accent-light);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 12px; padding: 60px 20px;
+  color: var(--text-muted); font-size: 0.9rem;
+}
+.loading-state .spinner { width: 28px; height: 28px; }
+
+.empty-state {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 8px; padding: 80px 20px;
+  color: var(--text-muted);
+}
+.empty-state .icon { font-size: 2.5rem; opacity: 0.3; margin-bottom: 4px; }
+.empty-state p { font-size: 0.95rem; }
+.empty-state .sub { font-size: 0.82rem; }
+
+/* ========== RESPONSIVE ========== */
+.sidebar-toggle {
+  display: none; background: none; border: none;
+  color: var(--text); cursor: pointer; padding: 6px;
+  font-size: 1.2rem;
+}
+
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .sidebar-toggle { display: block; }
+  .profile-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  .header { padding: 0 14px; }
+  .header-stats { display: none; }
+  .main { padding: 14px; }
+  .action-bar { flex-direction: column; align-items: stretch; }
+  .search-wrap { max-width: none; }
+  .action-right { margin-left: 0; justify-content: space-between; }
+  .profile-grid { grid-template-columns: 1fr; }
+  .form-row { flex-direction: column; gap: 0; }
+  .profile-list .profile-row { grid-template-columns: 8px 1fr auto; }
+  .profile-list .profile-row .hide-mobile { display: none; }
+  .list-header { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="header-left">
+    <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">&#9776;</button>
+    <span class="logo">AntiDetect</span>
+    <span class="logo-sub">Profile Manager</span>
+  </div>
+  <div class="header-stats">
+    <div class="stat-pill">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <span class="num" id="stat-profiles">0</span> profiles
+    </div>
+    <div class="stat-pill">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+      <span class="num" id="stat-folders">0</span> folders
+    </div>
+    <div class="stat-pill">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+      <span class="num" id="stat-running">0</span> running
+    </div>
+  </div>
+</header>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">Folders</div>
+  <div class="folder-list" id="folder-list">
+    <div class="folder-item active" data-folder-id="all" onclick="selectFolder('all')">
+      <span class="folder-icon">&#128194;</span>
+      <span class="folder-name">All Profiles</span>
+      <span class="folder-count" id="all-count">0</span>
+    </div>
+    <!-- dynamic folders -->
+  </div>
+  <div class="sidebar-footer">
+    <button class="new-folder-btn" onclick="openFolderModal()">
+      <span>+</span> New Folder
+    </button>
+  </div>
+</aside>
+
+<!-- Main Content -->
+<main class="main">
+  <!-- Action Bar -->
+  <div class="action-bar">
+    <div class="search-wrap">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input type="text" class="search-input" id="search-input" placeholder="Search profiles..." oninput="filterProfiles()">
+    </div>
+    <button class="btn btn-primary" onclick="openProfileModal()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      New Profile
+    </button>
+    <div class="action-right">
+      <select class="sort-select" id="sort-select" onchange="sortProfiles()">
+        <option value="name">Sort: Name</option>
+        <option value="created" selected>Sort: Date Created</option>
+        <option value="status">Sort: Status</option>
+      </select>
+      <div class="view-toggle">
+        <button class="view-btn active" id="view-grid" onclick="setView('grid')" title="Grid view">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+        </button>
+        <button class="view-btn" id="view-list" onclick="setView('list')" title="List view">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Content -->
+  <div id="profile-content">
+    <div class="loading-state">
+      <div class="spinner"></div>
+      Loading profiles...
+    </div>
+  </div>
+</main>
+
+<!-- Profile Modal -->
+<div class="modal-overlay" id="profile-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 class="modal-title" id="profile-modal-title">New Profile</h3>
+      <button class="modal-close" onclick="closeProfileModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-profile-id">
+
+      <div class="form-group">
+        <label class="form-label">Profile Name *</label>
+        <input type="text" class="form-input" id="pf-name" placeholder="e.g. My Profile #1">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Folder</label>
+          <select class="form-select" id="pf-folder">
+            <option value="">No folder</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Status</label>
+          <select class="form-select" id="pf-status">
+            <option value="ready">Ready</option>
+            <option value="running">Running</option>
+            <option value="stopped">Stopped</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Proxy</label>
+        <input type="text" class="form-input" id="pf-proxy" placeholder="ip:port:user:pass" style="font-family: 'SF Mono', monospace;">
+        <div class="form-hint">Format: ip:port or ip:port:username:password</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Window Size</label>
+        <div class="form-row">
+          <div class="form-group" style="margin-bottom:0">
+            <input type="number" class="form-input" id="pf-width" placeholder="Width" value="1920">
+          </div>
+          <div class="form-group" style="margin-bottom:0;flex:0 0 20px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);">&times;</div>
+          <div class="form-group" style="margin-bottom:0">
+            <input type="number" class="form-input" id="pf-height" placeholder="Height" value="1080">
+          </div>
+        </div>
+        <div class="preset-chips" id="size-presets">
+          <button class="preset-chip active" onclick="setSize(1920,1080,this)">1920&times;1080</button>
+          <button class="preset-chip" onclick="setSize(1366,768,this)">1366&times;768</button>
+          <button class="preset-chip" onclick="setSize(1440,900,this)">1440&times;900</button>
+          <button class="preset-chip" onclick="setSize(1536,864,this)">1536&times;864</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Notes</label>
+        <textarea class="form-textarea" id="pf-notes" placeholder="Optional notes about this profile..."></textarea>
+      </div>
+
+      <!-- Fingerprint collapsible -->
+      <div class="collapsible-header" onclick="toggleFingerprint(this)">
+        <h4>&#9881; Fingerprint Configuration</h4>
+        <span class="collapsible-arrow">&#9660;</span>
+      </div>
+      <div class="collapsible-body" id="fp-body">
+        <div class="collapsible-inner">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Operating System</label>
+              <select class="form-select" id="fp-os" onchange="regenHardware()">
+                <option value="Windows">Windows</option>
+                <option value="macOS">macOS</option>
+                <option value="Linux">Linux</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Browser</label>
+              <select class="form-select" id="fp-browser">
+                <option value="Chrome 130">Chrome 130</option>
+                <option value="Chrome 129">Chrome 129</option>
+                <option value="Chrome 128">Chrome 128</option>
+                <option value="Chrome 127">Chrome 127</option>
+                <option value="Chrome 126">Chrome 126</option>
+                <option value="Chrome 125">Chrome 125</option>
+                <option value="Chrome 124">Chrome 124</option>
+                <option value="Chrome 123">Chrome 123</option>
+                <option value="Chrome 122">Chrome 122</option>
+                <option value="Chrome 121">Chrome 121</option>
+                <option value="Chrome 120">Chrome 120</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Screen Resolution</label>
+            <select class="form-select" id="fp-screen">
+              <option value="auto">Auto (from window size)</option>
+              <option value="1920x1080">1920x1080</option>
+              <option value="2560x1440">2560x1440</option>
+              <option value="3840x2160">3840x2160</option>
+              <option value="1366x768">1366x768</option>
+              <option value="1440x900">1440x900</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Timezone</label>
+              <select class="form-select" id="fp-tz">
+                <option value="America/New_York">America/New_York</option>
+                <option value="America/Chicago">America/Chicago</option>
+                <option value="America/Denver">America/Denver</option>
+                <option value="America/Los_Angeles">America/Los_Angeles</option>
+                <option value="Europe/London">Europe/London</option>
+                <option value="Europe/Berlin">Europe/Berlin</option>
+                <option value="Europe/Paris">Europe/Paris</option>
+                <option value="Europe/Moscow">Europe/Moscow</option>
+                <option value="Asia/Tokyo">Asia/Tokyo</option>
+                <option value="Asia/Shanghai">Asia/Shanghai</option>
+                <option value="Asia/Kolkata">Asia/Kolkata</option>
+                <option value="Asia/Dubai">Asia/Dubai</option>
+                <option value="Australia/Sydney">Australia/Sydney</option>
+                <option value="Pacific/Auckland">Pacific/Auckland</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Language</label>
+              <select class="form-select" id="fp-lang">
+                <option value="en-US">English (US)</option>
+                <option value="en-GB">English (UK)</option>
+                <option value="de-DE">German</option>
+                <option value="fr-FR">French</option>
+                <option value="es-ES">Spanish</option>
+                <option value="pt-BR">Portuguese (BR)</option>
+                <option value="ru-RU">Russian</option>
+                <option value="ja-JP">Japanese</option>
+                <option value="zh-CN">Chinese (CN)</option>
+                <option value="ko-KR">Korean</option>
+                <option value="ar-SA">Arabic</option>
+              </select>
+            </div>
+          </div>
+
+          <label class="form-label">Hardware Fingerprint <span style="color:var(--text-muted)">(auto-generated)</span></label>
+          <div class="fp-readonly" id="fp-hardware">
+            <div class="fp-item"><span>Canvas: </span><strong id="hw-canvas">--</strong></div>
+            <div class="fp-item"><span>WebGL: </span><strong id="hw-webgl">--</strong></div>
+            <div class="fp-item"><span>AudioCtx: </span><strong id="hw-audio">--</strong></div>
+            <div class="fp-item"><span>CPUs: </span><strong id="hw-cpu">--</strong></div>
+            <div class="fp-item"><span>RAM: </span><strong id="hw-ram">--</strong></div>
+            <div class="fp-item"><span>GPU: </span><strong id="hw-gpu">--</strong></div>
+          </div>
+
+          <button class="btn-regen" onclick="regenHardware()">
+            &#8635; Regenerate Fingerprint
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeProfileModal()">Cancel</button>
+      <button class="btn btn-primary" id="profile-save-btn" onclick="saveProfile()">
+        Create Profile
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Launch Modal -->
+<div class="modal-overlay" id="launch-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <h3 class="modal-title">Launch Profile</h3>
+      <button class="modal-close" onclick="closeLaunchModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p style="color:var(--text-secondary);margin-bottom:16px;">
+        Follow these steps to launch <strong id="launch-profile-name" style="color:var(--text)">--</strong>:
+      </p>
+      <ol class="launch-steps">
+        <li>
+          Download the launcher script
+          <div style="margin-top:6px">
+            <a href="/downloads/launcher.py" class="btn btn-outline btn-sm" download>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+              launcher.py
+            </a>
+          </div>
+        </li>
+        <li>
+          Run the following command:
+          <div class="launch-cmd">
+            <code id="launch-cmd-text">python launcher.py --server https://nickets.xyz --profile XXX</code>
+            <button class="copy-btn" onclick="copyLaunchCmd()">Copy</button>
+          </div>
+        </li>
+        <li>The browser will open automatically with all profile settings applied.</li>
+      </ol>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeLaunchModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Folder Modal -->
+<div class="modal-overlay" id="folder-modal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3 class="modal-title" id="folder-modal-title">New Folder</h3>
+      <button class="modal-close" onclick="closeFolderModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-folder-id">
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Folder Name</label>
+        <input type="text" class="form-input" id="folder-name" placeholder="e.g. Facebook Accounts">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeFolderModal()">Cancel</button>
+      <button class="btn btn-primary" id="folder-save-btn" onclick="saveFolder()">Create Folder</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay" id="confirm-modal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <h3 class="modal-title" id="confirm-title">Confirm</h3>
+      <button class="modal-close" onclick="closeConfirm()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="confirm-body" id="confirm-body"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeConfirm()">Cancel</button>
+      <button class="btn" id="confirm-action-btn" style="background:var(--error);color:#fff;">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ==================== STATE ====================
+let profiles = [];
+let folders = [];
+let currentFolder = 'all';
+let currentView = 'grid';
+let searchQuery = '';
+let sortBy = 'created';
+
+// ==================== DEMO DATA ====================
+// Used when API is not available - provides realistic demo content
+const DEMO_FOLDERS = [
+  { id: 1, name: 'Facebook', created_at: '2026-05-20T10:00:00Z' },
+  { id: 2, name: 'Google Ads', created_at: '2026-05-21T10:00:00Z' },
+  { id: 3, name: 'E-commerce', created_at: '2026-05-22T10:00:00Z' },
+  { id: 4, name: 'Crypto', created_at: '2026-05-23T10:00:00Z' },
+  { id: 5, name: 'Social Media', created_at: '2026-05-24T10:00:00Z' },
+];
+
+const DEMO_PROFILES = [
+  { id: 1, name: 'FB Account #1 - US Male', folder_id: 1, proxy: '45.92.108.33:8080:user1:pass123', status: 'ready', window_width: 1920, window_height: 1080, notes: 'Main farming account, warmed up', fingerprint: { os: 'Windows', browser: 'Chrome 130', screen: 'auto', timezone: 'America/New_York', language: 'en-US', canvas_hash: 'a8f3d2', webgl_hash: 'e7b914', audio_hash: '3c6e9a', cpu_cores: 8, ram_gb: 16, gpu: 'NVIDIA GeForce GTX 1660' }, created_at: '2026-05-20T12:00:00Z' },
+  { id: 2, name: 'FB Account #2 - UK Female', folder_id: 1, proxy: '185.22.174.11:3128:ukprx:s3cure!', status: 'running', window_width: 1366, window_height: 768, notes: '', fingerprint: { os: 'macOS', browser: 'Chrome 129', screen: '1440x900', timezone: 'Europe/London', language: 'en-GB', canvas_hash: 'b2d1e5', webgl_hash: 'f0c832', audio_hash: '91a4d7', cpu_cores: 4, ram_gb: 8, gpu: 'Apple M1' }, created_at: '2026-05-20T14:00:00Z' },
+  { id: 3, name: 'Google Ads Manager', folder_id: 2, proxy: '104.238.77.55:9090', status: 'ready', window_width: 1920, window_height: 1080, notes: 'Agency account - handle with care', fingerprint: { os: 'Windows', browser: 'Chrome 128', screen: 'auto', timezone: 'America/Chicago', language: 'en-US', canvas_hash: 'c9e8f1', webgl_hash: 'a3d726', audio_hash: 'f5b0c4', cpu_cores: 12, ram_gb: 32, gpu: 'NVIDIA GeForce RTX 3070' }, created_at: '2026-05-21T09:00:00Z' },
+  { id: 4, name: 'Amazon Seller EU', folder_id: 3, proxy: '89.163.240.12:5432:amz:amz2024', status: 'ready', window_width: 1440, window_height: 900, notes: 'German marketplace account', fingerprint: { os: 'Windows', browser: 'Chrome 127', screen: '1440x900', timezone: 'Europe/Berlin', language: 'de-DE', canvas_hash: 'd4a3b7', webgl_hash: '82f5c1', audio_hash: 'e6d298', cpu_cores: 6, ram_gb: 16, gpu: 'AMD Radeon RX 580' }, created_at: '2026-05-22T11:00:00Z' },
+  { id: 5, name: 'Shopify Dropship #1', folder_id: 3, proxy: '72.14.201.88:4145:shopify:drop321', status: 'stopped', window_width: 1536, window_height: 864, notes: 'Paused - under review', fingerprint: { os: 'macOS', browser: 'Chrome 126', screen: 'auto', timezone: 'America/Los_Angeles', language: 'en-US', canvas_hash: 'e1f7a9', webgl_hash: '5db843', audio_hash: 'a2c1e0', cpu_cores: 8, ram_gb: 16, gpu: 'Apple M2 Pro' }, created_at: '2026-05-22T15:00:00Z' },
+  { id: 6, name: 'Binance Trading', folder_id: 4, proxy: '203.154.89.22:1080:bnc:trade44', status: 'ready', window_width: 1920, window_height: 1080, notes: 'Spot trading only', fingerprint: { os: 'Linux', browser: 'Chrome 130', screen: '2560x1440', timezone: 'Asia/Tokyo', language: 'ja-JP', canvas_hash: 'f6b2d8', webgl_hash: 'c4e917', audio_hash: 'b8a3f5', cpu_cores: 16, ram_gb: 64, gpu: 'NVIDIA GeForce RTX 4090' }, created_at: '2026-05-23T08:00:00Z' },
+  { id: 7, name: 'Twitter Growth #1', folder_id: 5, proxy: '91.207.57.120:8888:twtr:grow99', status: 'running', window_width: 1920, window_height: 1080, notes: 'Automated posting schedule', fingerprint: { os: 'Windows', browser: 'Chrome 125', screen: 'auto', timezone: 'America/Denver', language: 'en-US', canvas_hash: '73d1a4', webgl_hash: '19e5f8', audio_hash: 'c0b7d2', cpu_cores: 4, ram_gb: 8, gpu: 'Intel UHD Graphics 630' }, created_at: '2026-05-24T16:00:00Z' },
+  { id: 8, name: 'Instagram Outreach', folder_id: 5, proxy: '176.53.22.187:3000:igreach:0utRch!', status: 'ready', window_width: 1366, window_height: 768, notes: 'DM campaigns', fingerprint: { os: 'macOS', browser: 'Chrome 124', screen: '1366x768', timezone: 'Europe/Paris', language: 'fr-FR', canvas_hash: '8a4fe2', webgl_hash: 'd6c0b5', audio_hash: '47e9a1', cpu_cores: 8, ram_gb: 16, gpu: 'Apple M1 Pro' }, created_at: '2026-05-25T10:00:00Z' },
+  { id: 9, name: 'TikTok Creator', folder_id: 5, proxy: '', status: 'stopped', window_width: 1920, window_height: 1080, notes: 'No proxy assigned yet', fingerprint: { os: 'Windows', browser: 'Chrome 130', screen: 'auto', timezone: 'Asia/Shanghai', language: 'zh-CN', canvas_hash: '55c8d3', webgl_hash: 'a1b2c3', audio_hash: 'd4e5f6', cpu_cores: 8, ram_gb: 16, gpu: 'NVIDIA GeForce RTX 3060' }, created_at: '2026-05-26T12:00:00Z' },
+  { id: 10, name: 'eBay Stealth #1', folder_id: 3, proxy: '82.102.17.94:7777:ebay:stealth01', status: 'ready', window_width: 1440, window_height: 900, notes: 'Linked to new PayPal', fingerprint: { os: 'Windows', browser: 'Chrome 123', screen: '1440x900', timezone: 'Europe/London', language: 'en-GB', canvas_hash: 'bb11cc', webgl_hash: 'dd22ee', audio_hash: 'ff33aa', cpu_cores: 6, ram_gb: 12, gpu: 'AMD Radeon RX 6600' }, created_at: '2026-05-26T18:00:00Z' },
+];
+
+let useDemoData = false;
+let nextProfileId = 11;
+let nextFolderId = 6;
+
+// ==================== API HELPERS ====================
+const API_PREFIX = '/ad';
+async function api(method, path, body) {
+  try {
+    const opts = { method, headers: { 'Content-Type': 'application/json' } };
+    if (body) opts.body = JSON.stringify(body);
+    const resp = await fetch(API_PREFIX + path, opts);
+    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+    if (resp.status === 204) return null;
+    return await resp.json();
+  } catch (e) {
+    // If the API is unreachable, switch to demo mode
+    if (!useDemoData) {
+      useDemoData = true;
+      profiles = [...DEMO_PROFILES];
+      folders = [...DEMO_FOLDERS];
+      console.log('API unavailable, using demo data');
+    }
+    throw e;
+  }
+}
+
+// ==================== TOAST ====================
+function toast(msg, type = 'success') {
+  const container = document.getElementById('toast-container');
+  const icons = { success: '&#10003;', error: '&#10007;', info: '&#8505;' };
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span class="toast-icon">${icons[type] || icons.info}</span><span class="toast-msg">${msg}</span>`;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('removing');
+    setTimeout(() => el.remove(), 300);
+  }, 3500);
+}
+
+// ==================== STATS ====================
+async function loadStats() {
+  try {
+    const stats = await api('GET', '/api/stats');
+    document.getElementById('stat-profiles').textContent = stats.total_profiles || 0;
+    document.getElementById('stat-folders').textContent = stats.total_folders || 0;
+    document.getElementById('stat-running').textContent = stats.running || 0;
+  } catch {
+    updateStatsFromLocal();
+  }
+}
+
+function updateStatsFromLocal() {
+  document.getElementById('stat-profiles').textContent = profiles.length;
+  document.getElementById('stat-folders').textContent = folders.length;
+  document.getElementById('stat-running').textContent = profiles.filter(p => p.status === 'running').length;
+  document.getElementById('all-count').textContent = profiles.length;
+}
+
+// ==================== FOLDERS ====================
+async function loadFolders() {
+  try {
+    const data = await api('GET', '/api/folders');
+    folders = Array.isArray(data) ? data : (data.folders || data);
+  } catch {
+    // demo data already loaded
+  }
+  renderFolders();
+}
+
+function renderFolders() {
+  const list = document.getElementById('folder-list');
+  // keep the "All Profiles" item
+  const allItem = list.querySelector('[data-folder-id="all"]');
+  list.innerHTML = '';
+  list.appendChild(allItem);
+
+  folders.forEach(f => {
+    const count = profiles.filter(p => p.folder_id === f.id).length;
+    const div = document.createElement('div');
+    div.className = `folder-item${currentFolder == f.id ? ' active' : ''}`;
+    div.setAttribute('data-folder-id', f.id);
+    div.onclick = (e) => { if (!e.target.closest('.folder-actions')) selectFolder(f.id); };
+    div.innerHTML = `
+      <span class="folder-icon">&#128193;</span>
+      <span class="folder-name">${esc(f.name)}</span>
+      <span class="folder-count">${count}</span>
+      <div class="folder-actions">
+        <button class="folder-action-btn" onclick="editFolder(${f.id})" title="Rename">&#9998;</button>
+        <button class="folder-action-btn del" onclick="confirmDeleteFolder(${f.id},'${esc(f.name)}')" title="Delete">&#128465;</button>
+      </div>
+    `;
+    list.appendChild(div);
+  });
+
+  // Update All count
+  document.getElementById('all-count').textContent = profiles.length;
+
+  // Update folder dropdown in profile modal
+  const sel = document.getElementById('pf-folder');
+  const currentVal = sel.value;
+  sel.innerHTML = '<option value="">No folder</option>';
+  folders.forEach(f => {
+    sel.innerHTML += `<option value="${f.id}">${esc(f.name)}</option>`;
+  });
+  sel.value = currentVal;
+}
+
+function selectFolder(id) {
+  currentFolder = id;
+  document.querySelectorAll('.folder-item').forEach(el => {
+    el.classList.toggle('active', el.getAttribute('data-folder-id') == id);
+  });
+  renderProfiles();
+  // Close sidebar on mobile
+  if (window.innerWidth <= 900) document.getElementById('sidebar').classList.remove('open');
+}
+
+// ==================== PROFILES ====================
+async function loadProfiles() {
+  try {
+    const data = await api('GET', '/api/profiles');
+    profiles = Array.isArray(data) ? data : (data.profiles || data);
+  } catch {
+    // demo data already loaded
+  }
+  renderFolders();
+  renderProfiles();
+  updateStatsFromLocal();
+}
+
+function getFilteredProfiles() {
+  let list = [...profiles];
+
+  // Folder filter
+  if (currentFolder !== 'all') {
+    list = list.filter(p => p.folder_id == currentFolder);
+  }
+
+  // Search filter
+  if (searchQuery) {
+    const q = searchQuery.toLowerCase();
+    list = list.filter(p =>
+      (p.name || '').toLowerCase().includes(q) ||
+      (p.proxy || '').toLowerCase().includes(q) ||
+      (p.notes || '').toLowerCase().includes(q)
+    );
+  }
+
+  // Sort
+  list.sort((a, b) => {
+    if (sortBy === 'name') return (a.name || '').localeCompare(b.name || '');
+    if (sortBy === 'status') {
+      const order = { running: 0, ready: 1, stopped: 2 };
+      return (order[a.status] || 2) - (order[b.status] || 2);
+    }
+    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+  });
+
+  return list;
+}
+
+function renderProfiles() {
+  const container = document.getElementById('profile-content');
+  const list = getFilteredProfiles();
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">&#128373;</div>
+        <p>${searchQuery ? 'No profiles match your search' : 'No profiles yet'}</p>
+        <p class="sub">${searchQuery ? 'Try a different search term' : 'Create your first browser profile to get started'}</p>
+        ${!searchQuery ? '<button class="btn btn-primary" onclick="openProfileModal()" style="margin-top:12px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg> New Profile</button>' : ''}
+      </div>`;
+    return;
+  }
+
+  if (currentView === 'grid') {
+    container.innerHTML = '<div class="profile-grid">' + list.map(renderProfileCard).join('') + '</div>';
+  } else {
+    container.innerHTML = `
+      <div class="list-header">
+        <div></div><div>Name</div><div>Proxy</div><div>Fingerprint</div><div>Folder</div><div>Status</div><div>Actions</div>
+      </div>
+      <div class="profile-list">${list.map(renderProfileRow).join('')}</div>`;
+  }
+}
+
+function getFolderName(id) {
+  const f = folders.find(f => f.id == id);
+  return f ? f.name : 'Ungrouped';
+}
+
+function getOsIcon(os) {
+  if (!os) return '';
+  if (os.toLowerCase().includes('windows')) return '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75L9.75 5.75V12H3ZM10.5 5.625L21 4V12H10.5V5.625ZM3 12.75H9.75V19L3 18V12.75ZM10.5 12.75H21V20.75L10.5 19.125V12.75Z"/></svg>';
+  if (os.toLowerCase().includes('mac')) return '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11Z"/></svg>';
+  return '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12.5 2c-5.52 0-10 4.48-10 10s4.48 10 10 10c.52 0 1.02-.04 1.5-.13-.02-.34-.08-.79.18-1.13.26-.34 1.14-.87 1.14-.87s-.82-.62-.92-1.33c-.1-.71.36-.87.36-.87s-1.79-1.55-1.43-3.04c.36-1.5 2.57-2.98 2.57-2.98s-.89-.87-.89-1.69.89-1.63.89-1.63-1.61-.47-1.61-1.88c0-1.42 1.34-1.87 1.34-1.87S14.5 2.16 12.5 2Z"/></svg>';
+}
+
+function fpOs(fp) {
+  const plat = (fp.navigator && fp.navigator.platform) || fp.os || '';
+  if (plat.includes('Win')) return 'Windows';
+  if (plat.includes('Mac')) return 'macOS';
+  if (plat.includes('Linux')) return 'Linux';
+  return plat || 'Windows';
+}
+function fpBrowser(p) {
+  const ua = p.user_agent || '';
+  const m = ua.match(/Chrome\/(\d+)/);
+  return m ? 'Chrome ' + m[1] : (p.fingerprint && p.fingerprint.browser) || 'Chrome';
+}
+
+function renderProfileCard(p) {
+  const fp = p.fingerprint || {};
+  const os = fpOs(fp);
+  const browser = fpBrowser(p);
+  const proxyDisplay = p.proxy ? p.proxy : 'Direct (no proxy)';
+  const status = p.status || 'ready';
+  return `
+    <div class="profile-card">
+      <div class="profile-card-header">
+        <div class="status-dot ${status}"></div>
+        <div class="profile-name">${esc(p.name)}</div>
+        <span class="profile-status-label ${status}">${status}</span>
+      </div>
+      <div class="profile-proxy${p.proxy ? '' : ' none'}">${esc(proxyDisplay)}</div>
+      <div class="profile-fingerprint">
+        <span class="fp-tag">${getOsIcon(os)} ${esc(os)}</span>
+        <span class="fp-tag">${esc(browser)}</span>
+        <span class="fp-tag">${p.window_width || 1920}&times;${p.window_height || 1080}</span>
+      </div>
+      ${p.notes ? `<div class="profile-notes">${esc(p.notes)}</div>` : ''}
+      <div class="profile-footer">
+        <span class="folder-tag">&#128193; ${esc(getFolderName(p.folder_id))}</span>
+        <div class="card-actions">
+          <button class="card-btn launch" onclick="openLaunchModal(${p.id})" title="Launch">&#9654; Run</button>
+          <button class="card-btn edit" onclick="openEditProfile(${p.id})" title="Edit">&#9998;</button>
+          <button class="card-btn delete" onclick="confirmDeleteProfile(${p.id},'${esc(p.name)}')" title="Delete">&#128465;</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderProfileRow(p) {
+  const fp = p.fingerprint || {};
+  const os = fpOs(fp);
+  const browser = fpBrowser(p);
+  const status = p.status || 'ready';
+  return `
+    <div class="profile-row">
+      <div class="status-dot ${status}"></div>
+      <div class="profile-name">${esc(p.name)}</div>
+      <div class="profile-proxy hide-mobile" style="background:none;padding:0">${esc(p.proxy || 'Direct')}</div>
+      <div class="hide-mobile"><span class="fp-tag">${esc(os)} / ${esc(browser)}</span></div>
+      <div class="hide-mobile"><span class="folder-tag">&#128193; ${esc(getFolderName(p.folder_id))}</span></div>
+      <div><span class="profile-status-label ${p.status || 'ready'}">${p.status || 'ready'}</span></div>
+      <div class="card-actions">
+        <button class="card-btn launch" onclick="openLaunchModal(${p.id})" title="Launch">&#9654;</button>
+        <button class="card-btn edit" onclick="openEditProfile(${p.id})" title="Edit">&#9998;</button>
+        <button class="card-btn delete" onclick="confirmDeleteProfile(${p.id},'${esc(p.name)}')" title="Delete">&#128465;</button>
+      </div>
+    </div>`;
+}
+
+// ==================== PROFILE MODAL ====================
+function openProfileModal() {
+  document.getElementById('profile-modal-title').textContent = 'New Profile';
+  document.getElementById('profile-save-btn').textContent = 'Create Profile';
+  document.getElementById('edit-profile-id').value = '';
+  document.getElementById('pf-name').value = '';
+  document.getElementById('pf-folder').value = '';
+  document.getElementById('pf-proxy').value = '';
+  document.getElementById('pf-status').value = 'ready';
+  document.getElementById('pf-width').value = '1920';
+  document.getElementById('pf-height').value = '1080';
+  document.getElementById('pf-notes').value = '';
+  document.getElementById('fp-os').value = 'Windows';
+  document.getElementById('fp-browser').value = 'Chrome 130';
+  document.getElementById('fp-screen').value = 'auto';
+  document.getElementById('fp-tz').value = 'America/New_York';
+  document.getElementById('fp-lang').value = 'en-US';
+  resetPresetChips(1920, 1080);
+  regenHardware();
+  // Populate folder dropdown
+  renderFolders();
+  showModal('profile-modal');
+}
+
+function openEditProfile(id) {
+  const p = profiles.find(x => x.id === id);
+  if (!p) return;
+  const fp = p.fingerprint || {};
+  document.getElementById('profile-modal-title').textContent = 'Edit Profile';
+  document.getElementById('profile-save-btn').textContent = 'Save Changes';
+  document.getElementById('edit-profile-id').value = p.id;
+  document.getElementById('pf-name').value = p.name || '';
+  renderFolders();
+  document.getElementById('pf-folder').value = p.folder_id || '';
+  document.getElementById('pf-proxy').value = p.proxy || '';
+  document.getElementById('pf-status').value = p.status || 'ready';
+  document.getElementById('pf-width').value = p.window_width || 1920;
+  document.getElementById('pf-height').value = p.window_height || 1080;
+  document.getElementById('pf-notes').value = p.notes || '';
+  document.getElementById('fp-os').value = fp.os || 'Windows';
+  document.getElementById('fp-browser').value = fp.browser || 'Chrome 130';
+  document.getElementById('fp-screen').value = fp.screen || 'auto';
+  document.getElementById('fp-tz').value = fp.timezone || 'America/New_York';
+  document.getElementById('fp-lang').value = fp.language || 'en-US';
+  resetPresetChips(p.window_width, p.window_height);
+
+  // Set hardware values if available
+  if (fp.canvas_hash) {
+    document.getElementById('hw-canvas').textContent = fp.canvas_hash;
+    document.getElementById('hw-webgl').textContent = fp.webgl_hash || '--';
+    document.getElementById('hw-audio').textContent = fp.audio_hash || '--';
+    document.getElementById('hw-cpu').textContent = fp.cpu_cores || '--';
+    document.getElementById('hw-ram').textContent = (fp.ram_gb || '--') + ' GB';
+    document.getElementById('hw-gpu').textContent = fp.gpu || '--';
+  } else {
+    regenHardware();
+  }
+
+  showModal('profile-modal');
+}
+
+function closeProfileModal() { hideModal('profile-modal'); }
+
+async function saveProfile() {
+  const name = document.getElementById('pf-name').value.trim();
+  if (!name) { toast('Profile name is required', 'error'); return; }
+
+  const data = {
+    name,
+    folder_id: document.getElementById('pf-folder').value || null,
+    proxy: document.getElementById('pf-proxy').value.trim(),
+    status: document.getElementById('pf-status').value,
+    window_width: parseInt(document.getElementById('pf-width').value) || 1920,
+    window_height: parseInt(document.getElementById('pf-height').value) || 1080,
+    notes: document.getElementById('pf-notes').value.trim(),
+    fingerprint: {
+      os: document.getElementById('fp-os').value,
+      browser: document.getElementById('fp-browser').value,
+      screen: document.getElementById('fp-screen').value,
+      timezone: document.getElementById('fp-tz').value,
+      language: document.getElementById('fp-lang').value,
+      canvas_hash: document.getElementById('hw-canvas').textContent,
+      webgl_hash: document.getElementById('hw-webgl').textContent,
+      audio_hash: document.getElementById('hw-audio').textContent,
+      cpu_cores: parseInt(document.getElementById('hw-cpu').textContent) || 4,
+      ram_gb: parseInt(document.getElementById('hw-ram').textContent) || 8,
+      gpu: document.getElementById('hw-gpu').textContent,
+    }
+  };
+
+  if (data.folder_id) data.folder_id = parseInt(data.folder_id);
+
+  const editId = document.getElementById('edit-profile-id').value;
+
+  try {
+    if (editId) {
+      await api('PUT', `/api/profiles/${editId}`, data);
+      // Update locally
+      const idx = profiles.findIndex(p => p.id == editId);
+      if (idx >= 0) profiles[idx] = { ...profiles[idx], ...data };
+      toast('Profile updated successfully');
+    } else {
+      const result = await api('POST', '/api/profiles', data);
+      const newProfile = (result && result.profile) || result;
+      if (newProfile && newProfile.id) profiles.push(newProfile);
+      else {
+        data.id = nextProfileId++;
+        data.created_at = new Date().toISOString();
+        profiles.push(data);
+      }
+      toast('Profile created successfully');
+    }
+  } catch {
+    // Demo mode - update locally
+    if (editId) {
+      const idx = profiles.findIndex(p => p.id == editId);
+      if (idx >= 0) profiles[idx] = { ...profiles[idx], ...data };
+      toast('Profile updated successfully');
+    } else {
+      data.id = nextProfileId++;
+      data.created_at = new Date().toISOString();
+      profiles.push(data);
+      toast('Profile created successfully');
+    }
+  }
+
+  closeProfileModal();
+  renderFolders();
+  renderProfiles();
+  updateStatsFromLocal();
+}
+
+// ==================== FOLDER MODAL ====================
+function openFolderModal() {
+  document.getElementById('folder-modal-title').textContent = 'New Folder';
+  document.getElementById('folder-save-btn').textContent = 'Create Folder';
+  document.getElementById('edit-folder-id').value = '';
+  document.getElementById('folder-name').value = '';
+  showModal('folder-modal');
+}
+
+function editFolder(id) {
+  const f = folders.find(x => x.id === id);
+  if (!f) return;
+  document.getElementById('folder-modal-title').textContent = 'Rename Folder';
+  document.getElementById('folder-save-btn').textContent = 'Save';
+  document.getElementById('edit-folder-id').value = f.id;
+  document.getElementById('folder-name').value = f.name;
+  showModal('folder-modal');
+}
+
+function closeFolderModal() { hideModal('folder-modal'); }
+
+async function saveFolder() {
+  const name = document.getElementById('folder-name').value.trim();
+  if (!name) { toast('Folder name is required', 'error'); return; }
+
+  const editId = document.getElementById('edit-folder-id').value;
+
+  try {
+    if (editId) {
+      await api('PUT', `/api/folders/${editId}`, { name });
+      const idx = folders.findIndex(f => f.id == editId);
+      if (idx >= 0) folders[idx].name = name;
+      toast('Folder renamed');
+    } else {
+      const result = await api('POST', '/api/folders', { name });
+      const newFolder = (result && result.folder) || result;
+      if (newFolder && newFolder.id) folders.push(newFolder);
+      else {
+        folders.push({ id: nextFolderId++, name, created_at: new Date().toISOString() });
+      }
+      toast('Folder created');
+    }
+  } catch {
+    if (editId) {
+      const idx = folders.findIndex(f => f.id == editId);
+      if (idx >= 0) folders[idx].name = name;
+      toast('Folder renamed');
+    } else {
+      folders.push({ id: nextFolderId++, name, created_at: new Date().toISOString() });
+      toast('Folder created');
+    }
+  }
+
+  closeFolderModal();
+  renderFolders();
+  renderProfiles();
+  updateStatsFromLocal();
+}
+
+// ==================== DELETE CONFIRM ====================
+function confirmDeleteProfile(id, name) {
+  document.getElementById('confirm-title').textContent = 'Delete Profile';
+  document.getElementById('confirm-body').innerHTML = `<p>Are you sure you want to delete</p><p class="name">"${esc(name)}"</p><p style="margin-top:8px;font-size:0.82rem;color:var(--text-muted)">This action cannot be undone.</p>`;
+  const btn = document.getElementById('confirm-action-btn');
+  btn.textContent = 'Delete Profile';
+  btn.style.background = 'var(--error)';
+  btn.onclick = () => deleteProfile(id);
+  showModal('confirm-modal');
+}
+
+function confirmDeleteFolder(id, name) {
+  const count = profiles.filter(p => p.folder_id == id).length;
+  document.getElementById('confirm-title').textContent = 'Delete Folder';
+  document.getElementById('confirm-body').innerHTML = `<p>Delete folder</p><p class="name">"${esc(name)}"</p>${count > 0 ? `<p style="margin-top:8px;font-size:0.82rem;color:var(--warning);">${count} profile(s) will be moved to "Ungrouped"</p>` : ''}<p style="margin-top:8px;font-size:0.82rem;color:var(--text-muted)">This action cannot be undone.</p>`;
+  const btn = document.getElementById('confirm-action-btn');
+  btn.textContent = 'Delete Folder';
+  btn.style.background = 'var(--error)';
+  btn.onclick = () => deleteFolder(id);
+  showModal('confirm-modal');
+}
+
+function closeConfirm() { hideModal('confirm-modal'); }
+
+async function deleteProfile(id) {
+  try { await api('DELETE', `/api/profiles/${id}`); } catch {}
+  profiles = profiles.filter(p => p.id !== id);
+  closeConfirm();
+  renderFolders();
+  renderProfiles();
+  updateStatsFromLocal();
+  toast('Profile deleted');
+}
+
+async function deleteFolder(id) {
+  try { await api('DELETE', `/api/folders/${id}`); } catch {}
+  // Move profiles to ungrouped
+  profiles.forEach(p => { if (p.folder_id == id) p.folder_id = null; });
+  folders = folders.filter(f => f.id !== id);
+  if (currentFolder == id) selectFolder('all');
+  closeConfirm();
+  renderFolders();
+  renderProfiles();
+  updateStatsFromLocal();
+  toast('Folder deleted');
+}
+
+// ==================== LAUNCH MODAL ====================
+function openLaunchModal(id) {
+  const p = profiles.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('launch-profile-name').textContent = p.name;
+  document.getElementById('launch-cmd-text').textContent = `python launcher.py --server https://nickets.xyz --profile ${p.id}`;
+  showModal('launch-modal');
+}
+
+function closeLaunchModal() { hideModal('launch-modal'); }
+
+function copyLaunchCmd() {
+  const text = document.getElementById('launch-cmd-text').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    toast('Command copied to clipboard', 'info');
+  }).catch(() => {
+    // Fallback
+    const ta = document.createElement('textarea');
+    ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('Command copied to clipboard', 'info');
+  });
+}
+
+// ==================== MODAL HELPERS ====================
+function showModal(id) {
+  document.getElementById(id).classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function hideModal(id) {
+  document.getElementById(id).classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) {
+      overlay.classList.remove('show');
+      document.body.style.overflow = '';
+    }
+  });
+});
+
+// Close on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    document.querySelectorAll('.modal-overlay.show').forEach(m => {
+      m.classList.remove('show');
+    });
+    document.body.style.overflow = '';
+  }
+});
+
+// ==================== VIEW / SORT / SEARCH ====================
+function setView(view) {
+  currentView = view;
+  document.getElementById('view-grid').classList.toggle('active', view === 'grid');
+  document.getElementById('view-list').classList.toggle('active', view === 'list');
+  renderProfiles();
+}
+
+function sortProfiles() {
+  sortBy = document.getElementById('sort-select').value;
+  renderProfiles();
+}
+
+function filterProfiles() {
+  searchQuery = document.getElementById('search-input').value.trim();
+  renderProfiles();
+}
+
+// ==================== SIDEBAR TOGGLE ====================
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// ==================== SIZE PRESETS ====================
+function setSize(w, h, chip) {
+  document.getElementById('pf-width').value = w;
+  document.getElementById('pf-height').value = h;
+  resetPresetChips(w, h);
+}
+
+function resetPresetChips(w, h) {
+  document.querySelectorAll('#size-presets .preset-chip').forEach(c => {
+    const [cw, ch] = c.textContent.split('×').map(Number);
+    c.classList.toggle('active', cw === w && ch === h);
+  });
+}
+
+// ==================== FINGERPRINT ====================
+function toggleFingerprint(el) {
+  el.classList.toggle('open');
+  document.getElementById('fp-body').classList.toggle('open');
+}
+
+function regenHardware() {
+  const os = document.getElementById('fp-os').value;
+  const gpus = {
+    Windows: ['NVIDIA GeForce GTX 1660', 'NVIDIA GeForce RTX 3060', 'NVIDIA GeForce RTX 3070', 'NVIDIA GeForce RTX 4070', 'AMD Radeon RX 6600', 'AMD Radeon RX 580', 'Intel UHD Graphics 630', 'Intel UHD Graphics 770'],
+    macOS: ['Apple M1', 'Apple M1 Pro', 'Apple M2', 'Apple M2 Pro', 'Apple M3', 'AMD Radeon Pro 5500M'],
+    Linux: ['NVIDIA GeForce GTX 1080', 'NVIDIA GeForce RTX 2080', 'AMD Radeon RX 6700 XT', 'Intel UHD Graphics 620', 'Mesa Intel Xe Graphics']
+  };
+  const cpuOpts = os === 'macOS' ? [4, 8, 10, 12] : [4, 6, 8, 12, 16, 24];
+  const ramOpts = os === 'macOS' ? [8, 16, 24, 32, 64] : [8, 16, 32, 64];
+
+  const pick = arr => arr[Math.floor(Math.random() * arr.length)];
+  const hex = (n) => { let s = ''; for (let i = 0; i < n; i++) s += '0123456789abcdef'[Math.floor(Math.random()*16)]; return s; };
+
+  document.getElementById('hw-canvas').textContent = hex(6);
+  document.getElementById('hw-webgl').textContent = hex(6);
+  document.getElementById('hw-audio').textContent = hex(6);
+  document.getElementById('hw-cpu').textContent = pick(cpuOpts);
+  document.getElementById('hw-ram').textContent = pick(ramOpts) + ' GB';
+  document.getElementById('hw-gpu').textContent = pick(gpus[os] || gpus.Windows);
+}
+
+// ==================== UTILS ====================
+function esc(str) {
+  if (!str) return '';
+  const el = document.createElement('span');
+  el.textContent = str;
+  return el.innerHTML;
+}
+
+// ==================== INIT ====================
+async function init() {
+  // Show loading
+  document.getElementById('profile-content').innerHTML = '<div class="loading-state"><div class="spinner"></div>Loading profiles...</div>';
+
+  // Try API first, fall back to demo data
+  await loadFolders();
+  await loadProfiles();
+  await loadStats();
+}
+
+init();
+</script>
+</body>
+</html>

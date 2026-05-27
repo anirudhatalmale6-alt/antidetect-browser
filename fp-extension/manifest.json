@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "FP Shield",
+  "version": "1.0.0",
+  "description": "Browser fingerprint management",
+  "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["inject.js"],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "ISOLATED"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["spoof.js"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

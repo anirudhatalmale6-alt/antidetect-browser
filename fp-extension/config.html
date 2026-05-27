@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FP Shield - Configuration</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: #0f1117;
+      color: #e0e0e0;
+      padding: 32px;
+      min-height: 100vh;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .header h1 {
+      font-size: 24px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .badge-active {
+      background: rgba(34, 197, 94, 0.15);
+      color: #22c55e;
+      border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+
+    .badge-inactive {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .section {
+      background: #1a1d27;
+      border: 1px solid #2a2d3a;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .section-title {
+      padding: 16px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #a0a8c0;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      border-bottom: 1px solid #2a2d3a;
+      background: #161821;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    tr {
+      border-bottom: 1px solid #2a2d3a;
+    }
+
+    tr:last-child {
+      border-bottom: none;
+    }
+
+    td {
+      padding: 12px 20px;
+      font-size: 13px;
+    }
+
+    td:first-child {
+      color: #8b92a8;
+      width: 220px;
+      font-weight: 500;
+    }
+
+    td:last-child {
+      color: #e8eaf0;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 12px;
+    }
+
+    .actions {
+      margin-top: 24px;
+      display: flex;
+      gap: 12px;
+    }
+
+    button {
+      padding: 10px 20px;
+      border-radius: 8px;
+      border: none;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary {
+      background: #3b82f6;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+
+    .btn-secondary {
+      background: #2a2d3a;
+      color: #e0e0e0;
+      border: 1px solid #3a3d4a;
+    }
+
+    .btn-secondary:hover {
+      background: #3a3d4a;
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.25);
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      padding: 12px 20px;
+      background: #22c55e;
+      color: #fff;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+      pointer-events: none;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    #config-json {
+      width: 100%;
+      min-height: 200px;
+      background: #161821;
+      color: #e8eaf0;
+      border: 1px solid #2a2d3a;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      resize: vertical;
+      margin-top: 12px;
+    }
+
+    #config-json:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+
+    .no-config {
+      padding: 40px 20px;
+      text-align: center;
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>FP Shield</h1>
+    <span id="status-badge" class="badge badge-inactive">No Config</span>
+  </div>
+
+  <div id="config-display"></div>
+
+  <div class="section">
+    <div class="section-title">Edit Configuration (JSON)</div>
+    <div style="padding: 16px 20px;">
+      <textarea id="config-json" spellcheck="false" placeholder="Paste JSON config here..."></textarea>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn-primary" id="btn-save">Save Config</button>
+    <button class="btn-secondary" id="btn-defaults">Load Defaults</button>
+    <button class="btn-danger" id="btn-clear">Clear Config</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const DEFAULT_CONFIG = {
+      canvas_seed: 12345,
+      webgl_vendor: 'Google Inc. (Intel)',
+      webgl_renderer: 'ANGLE (Intel, Intel(R) UHD Graphics 620, OpenGL 4.5)',
+      audio_seed: 67890,
+      hardware_concurrency: 8,
+      device_memory: 16,
+      platform: 'Win32',
+      language: 'en-US',
+      languages: ['en-US', 'en'],
+      screen_width: 1920,
+      screen_height: 1080,
+      timezone_offset: -300,
+      timezone_name: 'America/New_York',
+    };
+
+    const SECTIONS = [
+      {
+        title: 'Canvas Fingerprint',
+        fields: [
+          { key: 'canvas_seed', label: 'Noise Seed' },
+        ],
+      },
+      {
+        title: 'WebGL',
+        fields: [
+          { key: 'webgl_vendor', label: 'Vendor' },
+          { key: 'webgl_renderer', label: 'Renderer' },
+        ],
+      },
+      {
+        title: 'Audio',
+        fields: [
+          { key: 'audio_seed', label: 'Audio Seed' },
+        ],
+      },
+      {
+        title: 'Navigator',
+        fields: [
+          { key: 'hardware_concurrency', label: 'Hardware Concurrency' },
+          { key: 'device_memory', label: 'Device Memory (GB)' },
+          { key: 'platform', label: 'Platform' },
+          { key: 'language', label: 'Language' },
+          { key: 'languages', label: 'Languages' },
+        ],
+      },
+      {
+        title: 'Screen',
+        fields: [
+          { key: 'screen_width', label: 'Width' },
+          { key: 'screen_height', label: 'Height' },
+        ],
+      },
+      {
+        title: 'Timezone',
+        fields: [
+          { key: 'timezone_offset', label: 'UTC Offset (minutes)' },
+          { key: 'timezone_name', label: 'Timezone Name' },
+        ],
+      },
+    ];
+
+    function showToast(msg, isError) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.style.background = isError ? '#ef4444' : '#22c55e';
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2000);
+    }
+
+    function formatValue(val) {
+      if (Array.isArray(val)) return JSON.stringify(val);
+      return String(val);
+    }
+
+    function renderConfig(config) {
+      const container = document.getElementById('config-display');
+      const badge = document.getElementById('status-badge');
+
+      if (!config || Object.keys(config).length === 0) {
+        container.innerHTML = '<div class="section"><div class="no-config">No fingerprint configuration loaded. Use the editor below to set one.</div></div>';
+        badge.textContent = 'No Config';
+        badge.className = 'badge badge-inactive';
+        return;
+      }
+
+      badge.textContent = 'Active';
+      badge.className = 'badge badge-active';
+
+      let html = '';
+      SECTIONS.forEach(section => {
+        html += '<div class="section">';
+        html += '<div class="section-title">' + section.title + '</div>';
+        html += '<table>';
+        section.fields.forEach(field => {
+          const val = config[field.key];
+          html += '<tr><td>' + field.label + '</td><td>' + (val !== undefined ? formatValue(val) : '<span style="color:#6b7280">not set</span>') + '</td></tr>';
+        });
+        html += '</table></div>';
+      });
+
+      container.innerHTML = html;
+    }
+
+    function loadConfig() {
+      chrome.storage.local.get('fp_config', (result) => {
+        const config = result.fp_config || null;
+        renderConfig(config);
+        document.getElementById('config-json').value = config ? JSON.stringify(config, null, 2) : '';
+      });
+    }
+
+    document.getElementById('btn-save').addEventListener('click', () => {
+      const raw = document.getElementById('config-json').value.trim();
+      if (!raw) {
+        showToast('Config is empty. Use "Clear" to remove.', true);
+        return;
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        chrome.storage.local.set({ fp_config: parsed }, () => {
+          showToast('Config saved. Reload pages to apply.');
+          renderConfig(parsed);
+        });
+      } catch (e) {
+        showToast('Invalid JSON: ' + e.message, true);
+      }
+    });
+
+    document.getElementById('btn-defaults').addEventListener('click', () => {
+      document.getElementById('config-json').value = JSON.stringify(DEFAULT_CONFIG, null, 2);
+      showToast('Default config loaded into editor.');
+    });
+
+    document.getElementById('btn-clear').addEventListener('click', () => {
+      chrome.storage.local.remove('fp_config', () => {
+        showToast('Config cleared. Spoofing disabled.');
+        renderConfig(null);
+        document.getElementById('config-json').value = '';
+      });
+    });
+
+    loadConfig();
+  </script>
+</body>
+</html>
