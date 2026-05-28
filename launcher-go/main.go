@@ -638,6 +638,64 @@ func ensureProxyAuthExtension(profileID, proxyStr string) (string, error) {
 }
 
 // ---------------------------------------------------------------------------
+// User extensions management
+// ---------------------------------------------------------------------------
+
+func extensionsDir() string {
+	return filepath.Join(dataDir, "extensions")
+}
+
+type UserExtension struct {
+	Name    string `json:"name"`
+	Path    string `json:"path"`
+	Version string `json:"version"`
+	Enabled bool   `json:"enabled"`
+}
+
+func listUserExtensions() []UserExtension {
+	extDir := extensionsDir()
+	os.MkdirAll(extDir, 0755)
+
+	entries, err := os.ReadDir(extDir)
+	if err != nil {
+		return nil
+	}
+
+	var exts []UserExtension
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		extPath := filepath.Join(extDir, entry.Name())
+		manifestPath := filepath.Join(extPath, "manifest.json")
+		if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
+			continue
+		}
+		name := entry.Name()
+		version := ""
+		data, err := os.ReadFile(manifestPath)
+		if err == nil {
+			var m map[string]interface{}
+			if json.Unmarshal(data, &m) == nil {
+				if n, ok := m["name"].(string); ok && n != "" {
+					name = n
+				}
+				if v, ok := m["version"].(string); ok {
+					version = v
+				}
+			}
+		}
+		exts = append(exts, UserExtension{
+			Name:    name,
+			Path:    extPath,
+			Version: version,
+			Enabled: true,
+		})
+	}
+	return exts
+}
+
+// ---------------------------------------------------------------------------
 // Profile launching
 // ---------------------------------------------------------------------------
 
@@ -727,6 +785,15 @@ func launchProfile(profileID string) error {
 	}
 
 	extensions := []string{fpDir}
+
+	// Load user extensions from extensions folder
+	userExts := listUserExtensions()
+	for _, ext := range userExts {
+		if ext.Enabled {
+			extensions = append(extensions, ext.Path)
+			log.Printf("Loading user extension: %s (%s)", ext.Name, ext.Path)
+		}
+	}
 
 	// Proxy
 	if profile.Proxy != "" {
@@ -961,6 +1028,34 @@ func handleDownloadChromium(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"status": "download_started"})
 }
 
+func handleExtensions(w http.ResponseWriter, r *http.Request) {
+	exts := listUserExtensions()
+	if exts == nil {
+		exts = []UserExtension{}
+	}
+	jsonOK(w, map[string]interface{}{
+		"extensions":      exts,
+		"extensions_path": extensionsDir(),
+	})
+}
+
+func handleOpenExtensionsFolder(w http.ResponseWriter, r *http.Request) {
+	dir := extensionsDir()
+	os.MkdirAll(dir, 0755)
+
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("explorer", dir)
+	case "darwin":
+		cmd = exec.Command("open", dir)
+	default:
+		cmd = exec.Command("xdg-open", dir)
+	}
+	cmd.Start()
+	jsonOK(w, map[string]string{"status": "opened", "path": dir})
+}
+
 // ---------------------------------------------------------------------------
 // Proxy handler — forwards unmatched /api/* requests to remote server
 // ---------------------------------------------------------------------------
@@ -1100,6 +1195,7 @@ func setupFileLogging() {
 
 func main() {
 	os.MkdirAll(dataDir, 0755)
+	os.MkdirAll(extensionsDir(), 0755)
 	setupFileLogging()
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	log.Println("Nickets starting...")
@@ -1115,6 +1211,8 @@ func main() {
 	mux.HandleFunc("/api/stop", withCORS(handleStop))
 	mux.HandleFunc("/api/status", withCORS(handleStatus))
 	mux.HandleFunc("/api/download-chromium", withCORS(handleDownloadChromium))
+	mux.HandleFunc("/api/extensions", withCORS(handleExtensions))
+	mux.HandleFunc("/api/open-extensions", withCORS(handleOpenExtensionsFolder))
 	mux.HandleFunc("/", handleIndex)
 
 	// Catch-all proxy for /api/* (anything not matched above)

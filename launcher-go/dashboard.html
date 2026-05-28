@@ -185,6 +185,12 @@
       <div class="nav-item" onclick="App.toggleAddFolder()" style="color:#52556a;">
         <span class="nav-item-icon">+</span> New Folder
       </div>
+
+      <div class="nav-section-title" style="margin-top:8px;">Extensions</div>
+      <div id="extensionList"><div style="padding:4px 16px;font-size:11px;color:#3f3f46;">No extensions</div></div>
+      <div class="nav-item" onclick="App.openExtensionsFolder()" style="color:#52556a;">
+        <span class="nav-item-icon">&#128194;</span> Open Extensions Folder
+      </div>
     </nav>
 
     <div class="sidebar-footer">
@@ -400,6 +406,7 @@ var App = (function() {
     ]).then(function() {
       renderSidebar();
       renderProfiles();
+      loadExtensions();
     }).catch(function(err) {
       toast('Refresh failed: ' + err.message, 'error');
     });
@@ -777,6 +784,38 @@ var App = (function() {
       .catch(function(err) { toast('Download error: ' + err.message, 'error'); });
   }
 
+  // Extensions
+  function loadExtensions() {
+    api('GET', '/api/extensions')
+      .then(function(data) {
+        var exts = data.extensions || [];
+        var el = document.getElementById('extensionList');
+        if (exts.length === 0) {
+          el.innerHTML = '<div style="padding:4px 16px;font-size:11px;color:#3f3f46;">No extensions</div>';
+          return;
+        }
+        var html = '';
+        for (var i = 0; i < exts.length; i++) {
+          var e = exts[i];
+          html += '<div class="nav-item" style="cursor:default;">';
+          html += '<span class="nav-item-icon" style="font-size:12px;">&#9733;</span> ';
+          html += '<span style="font-size:12px;">' + esc(e.name) + '</span>';
+          if (e.version) html += '<span class="count">' + esc(e.version) + '</span>';
+          html += '</div>';
+        }
+        el.innerHTML = html;
+      })
+      .catch(function() {});
+  }
+
+  function openExtensionsFolder() {
+    api('POST', '/api/open-extensions')
+      .then(function(data) {
+        toast('Extensions folder opened: ' + (data.path || ''), 'success');
+      })
+      .catch(function(err) { toast('Could not open folder: ' + err.message, 'error'); });
+  }
+
   // Status polling
   function pollStatus() {
     fetch('/api/status').then(function(r) { return r.json(); }).then(function(s) {
@@ -834,6 +873,7 @@ var App = (function() {
 
   // Init
   pollStatus();
+  loadExtensions();
   setInterval(pollStatus, 2500);
 
   // Close modals on overlay click
@@ -861,6 +901,7 @@ var App = (function() {
     renameFolder: renameFolder,
     deleteFolder: deleteFolder,
     downloadChromium: downloadChromium,
+    openExtensionsFolder: openExtensionsFolder,
     closeModal: closeModal
   };
 })();
