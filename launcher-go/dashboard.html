@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AntiDetect Browser</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0a0b10; color: #d1d5db; min-height: 100vh; overflow: hidden; }
+
+  /* Layout */
+  .app { display: flex; height: 100vh; }
+  .sidebar { width: 240px; background: #111218; border-right: 1px solid #1f2033; display: flex; flex-direction: column; flex-shrink: 0; }
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Sidebar */
+  .sidebar-header { padding: 16px 16px 12px; border-bottom: 1px solid #1f2033; }
+  .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, #7c3aed, #a855f7); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; color: #fff; font-weight: 700; }
+  .logo span { font-size: 15px; font-weight: 700; color: #fff; }
+
+  .connect-row { display: flex; gap: 6px; }
+  .connect-row input { flex: 1; background: #0a0b10; border: 1px solid #2a2b3d; border-radius: 6px; padding: 7px 10px; color: #d1d5db; font-size: 12px; outline: none; min-width: 0; }
+  .connect-row input:focus { border-color: #7c3aed; }
+  .connect-row button { background: #7c3aed; color: #fff; border: none; border-radius: 6px; padding: 7px 12px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .connect-row button:hover { background: #6d28d9; }
+  .connect-row button:disabled { opacity: .5; cursor: not-allowed; }
+
+  .sidebar-nav { flex: 1; overflow-y: auto; padding: 8px 0; }
+  .nav-section-title { font-size: 10px; font-weight: 700; color: #52556a; text-transform: uppercase; letter-spacing: .08em; padding: 12px 16px 4px; }
+
+  .nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 16px; cursor: pointer; font-size: 13px; transition: background .1s; position: relative; }
+  .nav-item:hover { background: #1a1b28; }
+  .nav-item.active { background: #1f1d35; color: #a78bfa; }
+  .nav-item .count { margin-left: auto; font-size: 11px; color: #52556a; background: #1a1b28; padding: 1px 7px; border-radius: 10px; }
+  .nav-item.active .count { background: #2d2556; color: #a78bfa; }
+  .nav-item-icon { width: 18px; text-align: center; font-size: 14px; flex-shrink: 0; }
+
+  .nav-item .folder-actions { position: absolute; right: 8px; display: none; gap: 2px; }
+  .nav-item:hover .folder-actions { display: flex; }
+  .nav-item .folder-actions button { background: none; border: none; color: #71717a; cursor: pointer; padding: 2px 4px; font-size: 12px; border-radius: 4px; }
+  .nav-item .folder-actions button:hover { background: #2a2b3d; color: #d1d5db; }
+
+  .sidebar-footer { padding: 12px 16px; border-top: 1px solid #1f2033; }
+  .sidebar-footer .status-line { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #71717a; margin-bottom: 6px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dot-green { background: #22c55e; box-shadow: 0 0 5px #22c55e66; }
+  .dot-yellow { background: #eab308; box-shadow: 0 0 5px #eab30866; }
+  .dot-red { background: #ef4444; box-shadow: 0 0 5px #ef444466; }
+  .dot-gray { background: #3f3f46; }
+  .chromium-btn { width: 100%; background: #1a1b28; border: 1px solid #2a2b3d; border-radius: 6px; padding: 7px; font-size: 11px; color: #d1d5db; cursor: pointer; text-align: center; }
+  .chromium-btn:hover { background: #222338; border-color: #7c3aed; }
+  .progress-mini { width: 100%; height: 4px; background: #1a1b28; border-radius: 2px; overflow: hidden; margin-top: 6px; }
+  .progress-mini-fill { height: 100%; background: linear-gradient(90deg, #7c3aed, #a855f7); border-radius: 2px; transition: width .3s; }
+
+  /* Main toolbar */
+  .toolbar { display: flex; align-items: center; gap: 10px; padding: 14px 24px; border-bottom: 1px solid #1f2033; background: #0d0e14; }
+  .toolbar-title { font-size: 16px; font-weight: 600; color: #fff; flex-shrink: 0; }
+  .search-box { flex: 1; max-width: 320px; position: relative; }
+  .search-box input { width: 100%; background: #111218; border: 1px solid #2a2b3d; border-radius: 8px; padding: 8px 12px 8px 32px; color: #d1d5db; font-size: 13px; outline: none; }
+  .search-box input:focus { border-color: #7c3aed; }
+  .search-box::before { content: '\1F50D'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; opacity: .4; }
+  .toolbar-actions { margin-left: auto; display: flex; gap: 8px; }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; transition: all .15s; white-space: nowrap; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-primary { background: #7c3aed; color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #6d28d9; }
+  .btn-ghost { background: transparent; color: #a1a1aa; border: 1px solid #2a2b3d; }
+  .btn-ghost:hover:not(:disabled) { background: #1a1b28; color: #d1d5db; }
+  .btn-danger { background: #dc2626; color: #fff; }
+  .btn-danger:hover:not(:disabled) { background: #b91c1c; }
+  .btn-success { background: #16a34a; color: #fff; }
+  .btn-success:hover:not(:disabled) { background: #15803d; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn-xs { padding: 4px 8px; font-size: 11px; border-radius: 5px; }
+
+  /* Content area */
+  .content { flex: 1; overflow-y: auto; padding: 20px 24px; }
+  .profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+
+  /* Profile card */
+  .profile-card { background: #111218; border: 1px solid #1f2033; border-radius: 12px; padding: 16px; transition: border-color .15s, box-shadow .15s; position: relative; }
+  .profile-card:hover { border-color: #2a2b3d; box-shadow: 0 4px 20px rgba(0,0,0,.3); }
+  .profile-card.running { border-color: #7c3aed44; }
+  .card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
+  .card-name { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 2px; }
+  .card-folder { font-size: 11px; color: #52556a; }
+  .card-badge { padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+  .badge-ready { background: #052e16; color: #4ade80; }
+  .badge-running { background: #1e1050; color: #a78bfa; }
+
+  .card-details { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin-bottom: 12px; }
+  .card-detail { display: flex; flex-direction: column; }
+  .card-detail-label { font-size: 10px; color: #52556a; text-transform: uppercase; letter-spacing: .05em; }
+  .card-detail-value { font-size: 12px; color: #a1a1aa; font-family: 'SF Mono', 'Fira Code', monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .card-actions { display: flex; gap: 6px; }
+  .card-actions .btn { flex: 1; }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 80px 20px; }
+  .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: .3; }
+  .empty-title { font-size: 16px; color: #71717a; margin-bottom: 4px; }
+  .empty-sub { font-size: 13px; color: #3f3f46; }
+
+  /* Modal */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .modal-overlay.show { display: flex; }
+  .modal { background: #111218; border: 1px solid #2a2b3d; border-radius: 16px; width: 520px; max-height: 90vh; overflow-y: auto; box-shadow: 0 24px 48px rgba(0,0,0,.5); }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px 16px; border-bottom: 1px solid #1f2033; }
+  .modal-header h3 { font-size: 16px; font-weight: 600; color: #fff; }
+  .modal-close { background: none; border: none; color: #71717a; font-size: 20px; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+  .modal-close:hover { background: #1f2033; color: #d1d5db; }
+  .modal-body { padding: 20px 24px; }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 24px 20px; border-top: 1px solid #1f2033; }
+
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; color: #a1a1aa; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .04em; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; background: #0a0b10; border: 1px solid #2a2b3d; border-radius: 8px; padding: 9px 12px; color: #d1d5db; font-size: 13px; font-family: inherit; outline: none; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: #7c3aed; }
+  .form-group textarea { resize: vertical; min-height: 60px; }
+  .form-group select { cursor: pointer; appearance: auto; }
+  .form-row { display: flex; gap: 12px; }
+  .form-row .form-group { flex: 1; }
+  .form-hint { font-size: 11px; color: #52556a; margin-top: 3px; }
+
+  .fp-summary { background: #0a0b10; border: 1px solid #1f2033; border-radius: 8px; padding: 10px 12px; margin-top: 14px; }
+  .fp-summary-title { font-size: 11px; font-weight: 600; color: #71717a; text-transform: uppercase; margin-bottom: 6px; }
+  .fp-row { display: flex; justify-content: space-between; font-size: 12px; padding: 2px 0; }
+  .fp-row .fp-key { color: #52556a; }
+  .fp-row .fp-val { color: #a1a1aa; font-family: 'SF Mono', monospace; text-align: right; max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Confirm dialog */
+  .confirm-modal .modal { width: 400px; }
+  .confirm-msg { font-size: 14px; color: #d1d5db; line-height: 1.5; }
+
+  /* Add folder input */
+  .add-folder-row { display: flex; gap: 6px; padding: 6px 16px; }
+  .add-folder-row input { flex: 1; background: #0a0b10; border: 1px solid #2a2b3d; border-radius: 6px; padding: 5px 8px; color: #d1d5db; font-size: 12px; outline: none; }
+  .add-folder-row input:focus { border-color: #7c3aed; }
+  .add-folder-row button { background: #7c3aed; color: #fff; border: none; border-radius: 6px; padding: 5px 10px; font-size: 11px; cursor: pointer; }
+
+  /* Toast */
+  .toast-container { position: fixed; top: 16px; right: 16px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
+  .toast { background: #1a1b28; border: 1px solid #2a2b3d; border-radius: 8px; padding: 10px 14px; font-size: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.4); animation: toastIn .2s ease; max-width: 340px; }
+  .toast-error { border-color: #dc2626; color: #fca5a5; }
+  .toast-success { border-color: #22c55e; color: #86efac; }
+  @keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2a2b3d; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a3b4d; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <div class="logo-icon">AD</div>
+        <span>AntiDetect</span>
+      </div>
+      <div class="connect-row">
+        <input type="text" id="serverUrl" value="https://nickets.xyz/ad" placeholder="Server URL">
+        <button id="btnConnect" onclick="App.connect()">Connect</button>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-title">Profiles</div>
+      <div id="navAll" class="nav-item active" onclick="App.selectFolder(null)">
+        <span class="nav-item-icon">&#128193;</span> All Profiles <span class="count" id="allCount">0</span>
+      </div>
+      <div id="folderList"></div>
+      <div class="add-folder-row" id="addFolderRow" style="display:none;">
+        <input type="text" id="newFolderName" placeholder="Folder name" onkeydown="if(event.key==='Enter')App.createFolder()">
+        <button onclick="App.createFolder()">Add</button>
+      </div>
+      <div class="nav-item" onclick="App.toggleAddFolder()" style="color:#52556a;">
+        <span class="nav-item-icon">+</span> New Folder
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="status-line"><span class="dot dot-gray" id="dotServer"></span><span id="serverStatus">Not connected</span></div>
+      <div class="status-line"><span class="dot dot-gray" id="dotChromium"></span><span id="chromiumStatus">Chromium: checking</span></div>
+      <div id="chromiumProgress" style="display:none;">
+        <div class="progress-mini"><div class="progress-mini-fill" id="progressFill" style="width:0%"></div></div>
+      </div>
+      <button class="chromium-btn" id="chromiumBtn" onclick="App.downloadChromium()">Download Chromium</button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="toolbar">
+      <span class="toolbar-title" id="toolbarTitle">All Profiles</span>
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search profiles..." oninput="App.filterProfiles()">
+      </div>
+      <div class="toolbar-actions">
+        <button class="btn btn-ghost btn-sm" onclick="App.refresh()">Refresh</button>
+        <button class="btn btn-primary btn-sm" onclick="App.showCreateModal()">+ New Profile</button>
+      </div>
+    </div>
+    <div class="content" id="content">
+      <div class="empty-state">
+        <div class="empty-icon">&#9672;</div>
+        <div class="empty-title">Connect to get started</div>
+        <div class="empty-sub">Enter your server URL and click Connect</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Create/Edit Profile Modal -->
+<div class="modal-overlay" id="profileModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">New Profile</h3>
+      <button class="modal-close" onclick="App.closeModal('profileModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editProfileId">
+
+      <div class="form-group">
+        <label>Profile Name</label>
+        <input type="text" id="profileName" placeholder="e.g. Profile 1">
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Folder</label>
+          <select id="profileFolder"></select>
+        </div>
+        <div class="form-group">
+          <label>OS / Platform</label>
+          <select id="profileOS">
+            <option value="Win32">Windows</option>
+            <option value="MacIntel">macOS</option>
+            <option value="Linux x86_64">Linux</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Proxy</label>
+        <input type="text" id="profileProxy" placeholder="host:port:username:password (or empty for direct)">
+        <div class="form-hint">Format: host:port:user:pass or host:port for no-auth proxy</div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Window Width</label>
+          <input type="number" id="profileWidth" value="1920" min="800" max="3840">
+        </div>
+        <div class="form-group">
+          <label>Window Height</label>
+          <input type="number" id="profileHeight" value="1080" min="600" max="2160">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Notes</label>
+        <textarea id="profileNotes" placeholder="Optional notes about this profile"></textarea>
+      </div>
+
+      <div class="form-group" id="regenFpGroup" style="display:none;">
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;cursor:pointer;">
+          <input type="checkbox" id="regenFp"> Regenerate fingerprint on save
+        </label>
+      </div>
+
+      <div id="fpSummaryContainer"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="App.closeModal('profileModal')">Cancel</button>
+      <button class="btn btn-primary" id="saveProfileBtn" onclick="App.saveProfile()">Create Profile</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay confirm-modal" id="confirmModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="confirmTitle">Confirm</h3>
+      <button class="modal-close" onclick="App.closeModal('confirmModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="confirm-msg" id="confirmMsg"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="App.closeModal('confirmModal')">Cancel</button>
+      <button class="btn btn-danger" id="confirmBtn" onclick="">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- Fingerprint Detail Modal -->
+<div class="modal-overlay" id="fpModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Fingerprint Details</h3>
+      <button class="modal-close" onclick="App.closeModal('fpModal')">&times;</button>
+    </div>
+    <div class="modal-body" id="fpModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="App.closeModal('fpModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+var App = (function() {
+  'use strict';
+
+  var state = {
+    connected: false,
+    profiles: [],
+    folders: [],
+    running: {},
+    activeFolder: null,
+    search: ''
+  };
+
+  // Helpers
+  function esc(s) {
+    if (!s) return '';
+    var d = document.createElement('div');
+    d.appendChild(document.createTextNode(s));
+    return d.innerHTML;
+  }
+
+  function toast(msg, type) {
+    var el = document.createElement('div');
+    el.className = 'toast' + (type ? ' toast-' + type : '');
+    el.textContent = msg;
+    document.getElementById('toasts').appendChild(el);
+    setTimeout(function() { el.remove(); }, 4000);
+  }
+
+  function api(method, path, body) {
+    var opts = { method: method, headers: {} };
+    if (body !== undefined) {
+      opts.headers['Content-Type'] = 'application/json';
+      opts.body = JSON.stringify(body);
+    }
+    return fetch(path, opts).then(function(r) {
+      return r.json().then(function(data) {
+        if (data.error) throw new Error(data.error);
+        return data;
+      });
+    });
+  }
+
+  // Connect
+  function connect() {
+    var server = document.getElementById('serverUrl').value.trim();
+    if (!server) { toast('Enter server URL', 'error'); return; }
+    var btn = document.getElementById('btnConnect');
+    btn.disabled = true; btn.textContent = '...';
+
+    api('POST', '/api/connect', { server: server })
+      .then(function() {
+        state.connected = true;
+        document.getElementById('dotServer').className = 'dot dot-green';
+        document.getElementById('serverStatus').textContent = 'Connected';
+        toast('Connected to server', 'success');
+        return refresh();
+      })
+      .catch(function(err) {
+        toast('Connection failed: ' + err.message, 'error');
+        document.getElementById('dotServer').className = 'dot dot-red';
+        document.getElementById('serverStatus').textContent = 'Failed';
+      })
+      .then(function() {
+        btn.disabled = false; btn.textContent = 'Connect';
+      });
+  }
+
+  // Refresh data
+  function refresh() {
+    if (!state.connected) return Promise.resolve();
+    return Promise.all([
+      api('GET', '/api/profiles').then(function(d) {
+        state.profiles = d.profiles || [];
+      }),
+      api('GET', '/api/folders').then(function(d) {
+        state.folders = d.folders || [];
+      })
+    ]).then(function() {
+      renderSidebar();
+      renderProfiles();
+    }).catch(function(err) {
+      toast('Refresh failed: ' + err.message, 'error');
+    });
+  }
+
+  // Sidebar
+  function renderSidebar() {
+    var total = state.profiles.length;
+    document.getElementById('allCount').textContent = total;
+
+    var html = '';
+    for (var i = 0; i < state.folders.length; i++) {
+      var f = state.folders[i];
+      var fid = f.id || f.ID;
+      var active = state.activeFolder !== null && String(state.activeFolder) === String(fid);
+      html += '<div class="nav-item' + (active ? ' active' : '') + '" onclick="App.selectFolder(' + fid + ')">';
+      html += '<span class="nav-item-icon">&#128194;</span> ' + esc(f.name);
+      html += '<span class="count">' + (f.profile_count || 0) + '</span>';
+      html += '<span class="folder-actions">';
+      html += '<button onclick="event.stopPropagation();App.renameFolder(' + fid + ',\'' + esc(f.name).replace(/'/g, "\\'") + '\')" title="Rename">&#9998;</button>';
+      html += '<button onclick="event.stopPropagation();App.deleteFolder(' + fid + ',\'' + esc(f.name).replace(/'/g, "\\'") + '\')" title="Delete">&times;</button>';
+      html += '</span></div>';
+    }
+    document.getElementById('folderList').innerHTML = html;
+
+    var navAll = document.getElementById('navAll');
+    if (state.activeFolder === null) navAll.className = 'nav-item active';
+    else navAll.className = 'nav-item';
+  }
+
+  function selectFolder(folderId) {
+    state.activeFolder = folderId;
+    renderSidebar();
+    renderProfiles();
+    var title = 'All Profiles';
+    if (folderId !== null) {
+      for (var i = 0; i < state.folders.length; i++) {
+        if (String(state.folders[i].id) === String(folderId)) {
+          title = state.folders[i].name;
+          break;
+        }
+      }
+    }
+    document.getElementById('toolbarTitle').textContent = title;
+  }
+
+  // Profiles
+  function getFilteredProfiles() {
+    var list = state.profiles;
+    if (state.activeFolder !== null) {
+      list = list.filter(function(p) { return String(p.folder_id) === String(state.activeFolder); });
+    }
+    var q = state.search.toLowerCase();
+    if (q) {
+      list = list.filter(function(p) {
+        return (p.name || '').toLowerCase().indexOf(q) >= 0 ||
+               (p.proxy || '').toLowerCase().indexOf(q) >= 0 ||
+               (p.notes || '').toLowerCase().indexOf(q) >= 0;
+      });
+    }
+    return list;
+  }
+
+  function renderProfiles() {
+    var list = getFilteredProfiles();
+    var el = document.getElementById('content');
+
+    if (!state.connected) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#9672;</div><div class="empty-title">Connect to get started</div><div class="empty-sub">Enter your server URL and click Connect</div></div>';
+      return;
+    }
+
+    if (list.length === 0) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128100;</div><div class="empty-title">No profiles found</div><div class="empty-sub">Click "+ New Profile" to create one</div></div>';
+      return;
+    }
+
+    var html = '<div class="profile-grid">';
+    for (var i = 0; i < list.length; i++) {
+      var p = list[i];
+      var isRunning = !!state.running[p.id];
+      var fp = (typeof p.fingerprint === 'object' && p.fingerprint) ? p.fingerprint : {};
+      var nav = fp.navigator || {};
+      var webgl = fp.webgl || {};
+      var scr = fp.screen || {};
+      var tz = fp.timezone || {};
+
+      var platform = nav.platform || 'Win32';
+      var osLabel = platform === 'MacIntel' ? 'macOS' : (platform === 'Linux x86_64' ? 'Linux' : 'Windows');
+      var proxy = p.proxy || 'Direct';
+      if (proxy.length > 28) proxy = proxy.substring(0, 28) + '...';
+      var gpu = (webgl.renderer || '').replace(/ANGLE \(/, '').replace(/\)$/, '');
+      if (gpu.length > 34) gpu = gpu.substring(0, 34) + '...';
+      if (!gpu) gpu = 'Auto';
+      var res = (scr.width || '?') + 'x' + (scr.height || '?');
+      var timezone = tz.id || tz.name || 'Auto';
+
+      html += '<div class="profile-card' + (isRunning ? ' running' : '') + '">';
+      html += '<div class="card-header"><div><div class="card-name">' + esc(p.name) + '</div>';
+      html += '<div class="card-folder">' + esc(p.folder_name || 'No folder') + '</div></div>';
+      html += '<span class="card-badge ' + (isRunning ? 'badge-running' : 'badge-ready') + '">' + (isRunning ? 'Running' : 'Ready') + '</span></div>';
+
+      html += '<div class="card-details">';
+      html += '<div class="card-detail"><span class="card-detail-label">OS</span><span class="card-detail-value">' + esc(osLabel) + '</span></div>';
+      html += '<div class="card-detail"><span class="card-detail-label">Proxy</span><span class="card-detail-value">' + esc(proxy) + '</span></div>';
+      html += '<div class="card-detail"><span class="card-detail-label">GPU</span><span class="card-detail-value">' + esc(gpu) + '</span></div>';
+      html += '<div class="card-detail"><span class="card-detail-label">Screen</span><span class="card-detail-value">' + esc(res) + '</span></div>';
+      html += '<div class="card-detail"><span class="card-detail-label">Timezone</span><span class="card-detail-value">' + esc(timezone) + '</span></div>';
+      html += '<div class="card-detail"><span class="card-detail-label">Window</span><span class="card-detail-value">' + p.window_width + 'x' + p.window_height + '</span></div>';
+      html += '</div>';
+
+      html += '<div class="card-actions">';
+      if (isRunning) {
+        html += '<button class="btn btn-danger btn-sm" onclick="App.stopProfile(\'' + p.id + '\')">Stop</button>';
+      } else {
+        html += '<button class="btn btn-success btn-sm" onclick="App.launchProfile(\'' + p.id + '\')">Launch</button>';
+      }
+      html += '<button class="btn btn-ghost btn-sm" onclick="App.showEditModal(\'' + p.id + '\')">Edit</button>';
+      html += '<button class="btn btn-ghost btn-sm" onclick="App.showFpDetails(\'' + p.id + '\')">FP</button>';
+      html += '<button class="btn btn-ghost btn-xs" onclick="App.confirmDeleteProfile(\'' + p.id + '\',\'' + esc(p.name).replace(/'/g, "\\'") + '\')" style="color:#71717a;">&times;</button>';
+      html += '</div></div>';
+    }
+    html += '</div>';
+    el.innerHTML = html;
+  }
+
+  function filterProfiles() {
+    state.search = document.getElementById('searchInput').value;
+    renderProfiles();
+  }
+
+  // Launch / Stop
+  function launchProfile(id) {
+    api('POST', '/api/launch', { profile_id: id })
+      .then(function() { toast('Profile launched', 'success'); pollStatus(); })
+      .catch(function(err) {
+        if (err.message.indexOf('not downloaded') >= 0) {
+          toast('Chromium not installed. Click Download Chromium.', 'error');
+        } else {
+          toast('Launch failed: ' + err.message, 'error');
+        }
+      });
+  }
+
+  function stopProfile(id) {
+    api('POST', '/api/stop', { profile_id: id })
+      .then(function() { toast('Profile stopped', 'success'); pollStatus(); })
+      .catch(function(err) { toast('Stop failed: ' + err.message, 'error'); });
+  }
+
+  // Create / Edit Profile
+  function showCreateModal() {
+    document.getElementById('editProfileId').value = '';
+    document.getElementById('modalTitle').textContent = 'New Profile';
+    document.getElementById('saveProfileBtn').textContent = 'Create Profile';
+    document.getElementById('profileName').value = '';
+    document.getElementById('profileProxy').value = '';
+    document.getElementById('profileWidth').value = '1920';
+    document.getElementById('profileHeight').value = '1080';
+    document.getElementById('profileNotes').value = '';
+    document.getElementById('profileOS').value = 'Win32';
+    document.getElementById('regenFpGroup').style.display = 'none';
+    document.getElementById('fpSummaryContainer').innerHTML = '';
+    populateFolderSelect(state.activeFolder);
+    openModal('profileModal');
+  }
+
+  function showEditModal(id) {
+    var p = state.profiles.find(function(x) { return x.id === id; });
+    if (!p) return;
+    document.getElementById('editProfileId').value = p.id;
+    document.getElementById('modalTitle').textContent = 'Edit Profile';
+    document.getElementById('saveProfileBtn').textContent = 'Save Changes';
+    document.getElementById('profileName').value = p.name;
+    document.getElementById('profileProxy').value = p.proxy || '';
+    document.getElementById('profileWidth').value = p.window_width || 1920;
+    document.getElementById('profileHeight').value = p.window_height || 1080;
+    document.getElementById('profileNotes').value = p.notes || '';
+
+    var fp = (typeof p.fingerprint === 'object' && p.fingerprint) ? p.fingerprint : {};
+    var nav = fp.navigator || {};
+    document.getElementById('profileOS').value = nav.platform || 'Win32';
+
+    document.getElementById('regenFpGroup').style.display = '';
+    document.getElementById('regenFp').checked = false;
+    populateFolderSelect(p.folder_id);
+    showFpSummaryInline(fp);
+    openModal('profileModal');
+  }
+
+  function populateFolderSelect(selectedId) {
+    var sel = document.getElementById('profileFolder');
+    var html = '<option value="">No Folder</option>';
+    for (var i = 0; i < state.folders.length; i++) {
+      var f = state.folders[i];
+      var fid = f.id || f.ID;
+      var selected = (selectedId !== null && String(selectedId) === String(fid)) ? ' selected' : '';
+      html += '<option value="' + fid + '"' + selected + '>' + esc(f.name) + '</option>';
+    }
+    sel.innerHTML = html;
+  }
+
+  function showFpSummaryInline(fp) {
+    var c = document.getElementById('fpSummaryContainer');
+    if (!fp || !fp.navigator) { c.innerHTML = ''; return; }
+    c.innerHTML = buildFpSummaryHTML(fp);
+  }
+
+  function buildFpSummaryHTML(fp) {
+    var nav = fp.navigator || {};
+    var webgl = fp.webgl || {};
+    var canvas = fp.canvas || {};
+    var audio = fp.audio || {};
+    var scr = fp.screen || {};
+    var tz = fp.timezone || {};
+    var html = '<div class="fp-summary"><div class="fp-summary-title">Fingerprint</div>';
+    html += fpRow('Platform', nav.platform || '-');
+    html += fpRow('Cores', nav.hardware_concurrency || '-');
+    html += fpRow('Memory', (nav.device_memory || '-') + ' GB');
+    html += fpRow('Language', nav.language || '-');
+    html += fpRow('WebGL', webgl.renderer || '-');
+    html += fpRow('Canvas Seed', canvas.noise_seed || '-');
+    html += fpRow('Audio Seed', audio.noise_seed || '-');
+    html += fpRow('Screen', (scr.width || '-') + 'x' + (scr.height || '-'));
+    html += fpRow('Timezone', tz.id || tz.name || '-');
+    html += '</div>';
+    return html;
+  }
+
+  function fpRow(key, val) {
+    return '<div class="fp-row"><span class="fp-key">' + esc(key) + '</span><span class="fp-val">' + esc(String(val)) + '</span></div>';
+  }
+
+  function saveProfile() {
+    var id = document.getElementById('editProfileId').value;
+    var name = document.getElementById('profileName').value.trim();
+    if (!name) { toast('Profile name is required', 'error'); return; }
+
+    var folderId = document.getElementById('profileFolder').value;
+    var body = {
+      name: name,
+      folder_id: folderId ? parseInt(folderId) : null,
+      proxy: document.getElementById('profileProxy').value.trim(),
+      window_width: parseInt(document.getElementById('profileWidth').value) || 1920,
+      window_height: parseInt(document.getElementById('profileHeight').value) || 1080,
+      notes: document.getElementById('profileNotes').value.trim(),
+      platform: document.getElementById('profileOS').value
+    };
+
+    if (id) {
+      if (document.getElementById('regenFp').checked) {
+        body.regenerate_fingerprint = true;
+      }
+      api('PUT', '/api/profiles/' + id, body)
+        .then(function() {
+          toast('Profile updated', 'success');
+          closeModal('profileModal');
+          return refresh();
+        })
+        .catch(function(err) { toast('Update failed: ' + err.message, 'error'); });
+    } else {
+      api('POST', '/api/profiles', body)
+        .then(function() {
+          toast('Profile created', 'success');
+          closeModal('profileModal');
+          return refresh();
+        })
+        .catch(function(err) { toast('Create failed: ' + err.message, 'error'); });
+    }
+  }
+
+  function confirmDeleteProfile(id, name) {
+    document.getElementById('confirmTitle').textContent = 'Delete Profile';
+    document.getElementById('confirmMsg').textContent = 'Delete profile "' + name + '"? This cannot be undone.';
+    document.getElementById('confirmBtn').onclick = function() {
+      api('DELETE', '/api/profiles/' + id)
+        .then(function() { toast('Profile deleted', 'success'); closeModal('confirmModal'); return refresh(); })
+        .catch(function(err) { toast('Delete failed: ' + err.message, 'error'); });
+    };
+    openModal('confirmModal');
+  }
+
+  // Fingerprint details
+  function showFpDetails(id) {
+    var p = state.profiles.find(function(x) { return x.id === id; });
+    if (!p) return;
+    var fp = (typeof p.fingerprint === 'object' && p.fingerprint) ? p.fingerprint : {};
+
+    var body = document.getElementById('fpModalBody');
+    var html = '<div style="margin-bottom:8px;font-size:14px;font-weight:600;color:#fff;">' + esc(p.name) + '</div>';
+    html += buildFpSummaryHTML(fp);
+
+    var webgl = fp.webgl || {};
+    if (webgl.vendor) {
+      html += '<div class="fp-summary" style="margin-top:10px"><div class="fp-summary-title">WebGL Details</div>';
+      html += fpRow('Vendor', webgl.vendor);
+      html += fpRow('Renderer', webgl.renderer);
+      if (webgl.noise_seed) html += fpRow('Noise Seed', webgl.noise_seed);
+      html += '</div>';
+    }
+
+    var canvas = fp.canvas || {};
+    if (canvas.noise_seed) {
+      html += '<div class="fp-summary" style="margin-top:10px"><div class="fp-summary-title">Canvas</div>';
+      html += fpRow('Noise Seed', canvas.noise_seed);
+      html += fpRow('Noise Level', canvas.noise_level || '-');
+      html += '</div>';
+    }
+
+    var md = fp.media_devices || {};
+    if (md.audioinput !== undefined) {
+      html += '<div class="fp-summary" style="margin-top:10px"><div class="fp-summary-title">Media Devices</div>';
+      html += fpRow('Audio Input', md.audioinput);
+      html += fpRow('Audio Output', md.audiooutput || '-');
+      html += fpRow('Video Input', md.videoinput || '-');
+      html += '</div>';
+    }
+
+    body.innerHTML = html;
+    openModal('fpModal');
+  }
+
+  // Folders
+  function toggleAddFolder() {
+    var row = document.getElementById('addFolderRow');
+    if (row.style.display === 'none') {
+      row.style.display = 'flex';
+      document.getElementById('newFolderName').focus();
+    } else {
+      row.style.display = 'none';
+    }
+  }
+
+  function createFolder() {
+    var name = document.getElementById('newFolderName').value.trim();
+    if (!name) return;
+    api('POST', '/api/folders', { name: name })
+      .then(function() {
+        toast('Folder created', 'success');
+        document.getElementById('newFolderName').value = '';
+        document.getElementById('addFolderRow').style.display = 'none';
+        return refresh();
+      })
+      .catch(function(err) { toast('Create failed: ' + err.message, 'error'); });
+  }
+
+  function renameFolder(id, currentName) {
+    var newName = prompt('Rename folder:', currentName);
+    if (!newName || newName === currentName) return;
+    api('PUT', '/api/folders/' + id, { name: newName })
+      .then(function() { toast('Folder renamed', 'success'); return refresh(); })
+      .catch(function(err) { toast('Rename failed: ' + err.message, 'error'); });
+  }
+
+  function deleteFolder(id, name) {
+    document.getElementById('confirmTitle').textContent = 'Delete Folder';
+    document.getElementById('confirmMsg').textContent = 'Delete folder "' + name + '"? Profiles inside will be unassigned.';
+    document.getElementById('confirmBtn').onclick = function() {
+      api('DELETE', '/api/folders/' + id)
+        .then(function() {
+          toast('Folder deleted', 'success');
+          if (String(state.activeFolder) === String(id)) state.activeFolder = null;
+          closeModal('confirmModal');
+          return refresh();
+        })
+        .catch(function(err) { toast('Delete failed: ' + err.message, 'error'); });
+    };
+    openModal('confirmModal');
+  }
+
+  // Chromium
+  function downloadChromium() {
+    api('POST', '/api/download-chromium')
+      .then(function() { toast('Chromium download started', 'success'); })
+      .catch(function(err) { toast('Download error: ' + err.message, 'error'); });
+  }
+
+  // Status polling
+  function pollStatus() {
+    fetch('/api/status').then(function(r) { return r.json(); }).then(function(s) {
+      // Chromium status
+      var dotCh = document.getElementById('dotChromium');
+      var chText = document.getElementById('chromiumStatus');
+      var chProg = document.getElementById('chromiumProgress');
+      var chBtn = document.getElementById('chromiumBtn');
+
+      if (s.chromium_ready) {
+        dotCh.className = 'dot dot-green';
+        chText.textContent = 'Chromium: ready';
+        chProg.style.display = 'none';
+        chBtn.style.display = 'none';
+      } else if (s.downloading) {
+        var pct = Math.round(s.download_progress);
+        dotCh.className = 'dot dot-yellow';
+        chText.textContent = 'Downloading: ' + pct + '%';
+        chProg.style.display = '';
+        document.getElementById('progressFill').style.width = pct + '%';
+        chBtn.style.display = 'none';
+      } else if (s.download_error) {
+        dotCh.className = 'dot dot-red';
+        chText.textContent = 'Error';
+        chProg.style.display = 'none';
+        chBtn.style.display = '';
+      } else {
+        dotCh.className = 'dot dot-gray';
+        chText.textContent = 'Chromium: not installed';
+        chProg.style.display = 'none';
+        chBtn.style.display = '';
+      }
+
+      // Server status
+      if (s.server_connected && !state.connected) {
+        state.connected = true;
+        document.getElementById('dotServer').className = 'dot dot-green';
+        document.getElementById('serverStatus').textContent = 'Connected';
+      }
+
+      // Running profiles
+      state.running = {};
+      if (s.running) {
+        for (var i = 0; i < s.running.length; i++) {
+          state.running[s.running[i].profile_id] = s.running[i].pid;
+        }
+      }
+      if (state.profiles.length) renderProfiles();
+    }).catch(function() {});
+  }
+
+  // Modals
+  function openModal(id) { document.getElementById(id).classList.add('show'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+  // Init
+  pollStatus();
+  setInterval(pollStatus, 2500);
+
+  // Close modals on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
+    overlay.addEventListener('click', function(e) {
+      if (e.target === overlay) closeModal(overlay.id);
+    });
+  });
+
+  // Expose public API
+  return {
+    connect: connect,
+    refresh: refresh,
+    selectFolder: selectFolder,
+    filterProfiles: filterProfiles,
+    launchProfile: launchProfile,
+    stopProfile: stopProfile,
+    showCreateModal: showCreateModal,
+    showEditModal: showEditModal,
+    saveProfile: saveProfile,
+    confirmDeleteProfile: confirmDeleteProfile,
+    showFpDetails: showFpDetails,
+    toggleAddFolder: toggleAddFolder,
+    createFolder: createFolder,
+    renameFolder: renameFolder,
+    deleteFolder: deleteFolder,
+    downloadChromium: downloadChromium,
+    closeModal: closeModal
+  };
+})();
+</script>
+</body>
+</html>
