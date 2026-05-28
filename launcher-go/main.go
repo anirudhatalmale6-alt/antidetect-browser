@@ -1034,10 +1034,45 @@ func jsonOK(w http.ResponseWriter, data interface{}) {
 }
 
 // ---------------------------------------------------------------------------
-// Open browser
+// Open browser in app mode (no tabs, no address bar — looks like native app)
 // ---------------------------------------------------------------------------
 
+func findAppBrowser() string {
+	if runtime.GOOS != "windows" {
+		return ""
+	}
+	candidates := []string{
+		filepath.Join(os.Getenv("PROGRAMFILES"), "Google", "Chrome", "Application", "chrome.exe"),
+		filepath.Join(os.Getenv("PROGRAMFILES(X86)"), "Google", "Chrome", "Application", "chrome.exe"),
+		filepath.Join(os.Getenv("LOCALAPPDATA"), "Google", "Chrome", "Application", "chrome.exe"),
+		filepath.Join(os.Getenv("PROGRAMFILES(X86)"), "Microsoft", "Edge", "Application", "msedge.exe"),
+		filepath.Join(os.Getenv("PROGRAMFILES"), "Microsoft", "Edge", "Application", "msedge.exe"),
+	}
+	for _, p := range candidates {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return ""
+}
+
 func openBrowser(url string) {
+	if runtime.GOOS == "windows" {
+		browser := findAppBrowser()
+		if browser != "" {
+			appDataDir := filepath.Join(dataDir, "app-window")
+			os.MkdirAll(appDataDir, 0755)
+			cmd := exec.Command(browser,
+				"--app="+url,
+				"--user-data-dir="+appDataDir,
+				"--window-size=1300,800",
+				"--disable-extensions",
+				"--new-window",
+			)
+			cmd.Start()
+			return
+		}
+	}
 	var cmd *exec.Cmd
 	switch runtime.GOOS {
 	case "windows":
@@ -1054,12 +1089,22 @@ func openBrowser(url string) {
 // Main
 // ---------------------------------------------------------------------------
 
+func setupFileLogging() {
+	logPath := filepath.Join(dataDir, "nickets.log")
+	f, err := os.OpenFile(logPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	if err != nil {
+		return
+	}
+	log.SetOutput(f)
+}
+
 func main() {
+	os.MkdirAll(dataDir, 0755)
+	setupFileLogging()
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	log.Println("Nickets Browser starting...")
+	log.Println("Nickets starting...")
 	log.Printf("Data directory: %s", dataDir)
 
-	os.MkdirAll(dataDir, 0755)
 	checkChromium()
 
 	mux := http.NewServeMux()
@@ -1083,13 +1128,11 @@ func main() {
 	url := "http://" + addr
 	log.Printf("GUI available at %s", url)
 
-	// Open browser after a brief delay
+	// Open app window after a brief delay
 	go func() {
-		time.Sleep(300 * time.Millisecond)
+		time.Sleep(500 * time.Millisecond)
 		openBrowser(url)
 	}()
-
-	fmt.Printf("\n  Nickets is running.\n  Open your browser to: %s\n  Press Ctrl+C to quit.\n\n", url)
 
 	server := &http.Server{Handler: mux}
 	if err := server.Serve(listener); err != nil {
