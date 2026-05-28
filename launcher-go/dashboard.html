@@ -166,10 +166,7 @@
         <div class="logo-icon">N</div>
         <span>Nickets</span>
       </div>
-      <div class="connect-row">
-        <input type="text" id="serverUrl" value="https://nickets.xyz/ad" placeholder="Server URL">
-        <button id="btnConnect" onclick="App.connect()">Connect</button>
-      </div>
+      <input type="hidden" id="serverUrl" value="https://nickets.xyz/ad">
     </div>
 
     <nav class="sidebar-nav">
@@ -371,25 +368,22 @@ var App = (function() {
   // Connect
   function connect() {
     var server = document.getElementById('serverUrl').value.trim();
-    if (!server) { toast('Enter server URL', 'error'); return; }
-    var btn = document.getElementById('btnConnect');
-    btn.disabled = true; btn.textContent = '...';
+    if (!server) return;
+
+    document.getElementById('dotServer').className = 'dot dot-yellow';
+    document.getElementById('serverStatus').textContent = 'Connecting...';
 
     api('POST', '/api/connect', { server: server })
       .then(function() {
         state.connected = true;
         document.getElementById('dotServer').className = 'dot dot-green';
         document.getElementById('serverStatus').textContent = 'Connected';
-        toast('Connected to server', 'success');
         return refresh();
       })
       .catch(function(err) {
-        toast('Connection failed: ' + err.message, 'error');
         document.getElementById('dotServer').className = 'dot dot-red';
-        document.getElementById('serverStatus').textContent = 'Failed';
-      })
-      .then(function() {
-        btn.disabled = false; btn.textContent = 'Connect';
+        document.getElementById('serverStatus').textContent = 'Offline - retrying...';
+        setTimeout(function() { connect(); }, 5000);
       });
   }
 
@@ -475,7 +469,7 @@ var App = (function() {
     var el = document.getElementById('content');
 
     if (!state.connected) {
-      el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#9672;</div><div class="empty-title">Connect to get started</div><div class="empty-sub">Enter your server URL and click Connect</div></div>';
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon">&#9672;</div><div class="empty-title">Connecting...</div><div class="empty-sub">Loading your profiles</div></div>';
       return;
     }
 
@@ -871,10 +865,11 @@ var App = (function() {
   function openModal(id) { document.getElementById(id).classList.add('show'); }
   function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
-  // Init
+  // Init - auto-connect on startup
   pollStatus();
   loadExtensions();
   setInterval(pollStatus, 2500);
+  setTimeout(function() { connect(); }, 300);
 
   // Close modals on overlay click
   document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
