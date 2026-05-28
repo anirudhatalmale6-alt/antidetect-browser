@@ -865,22 +865,24 @@ body {
       </p>
       <ol class="launch-steps">
         <li>
-          Download the launcher script
+          Download the AntiDetect Launcher (one-time setup)
           <div style="margin-top:6px">
-            <a href="/downloads/launcher.py" class="btn btn-outline btn-sm" download>
+            <a href="/ad/api/launch-script" class="btn btn-outline btn-sm" download="antidetect-launcher.py">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-              launcher.py
+              antidetect-launcher.py
             </a>
           </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Requires Python 3.8+. First run downloads Chromium automatically.</div>
         </li>
         <li>
-          Run the following command:
+          Launch this profile:
           <div class="launch-cmd">
-            <code id="launch-cmd-text">python launcher.py --server https://nickets.xyz --profile XXX</code>
+            <code id="launch-cmd-text">python antidetect-launcher.py --server https://nickets.xyz/ad --profile XXX --launch</code>
             <button class="copy-btn" onclick="copyLaunchCmd()">Copy</button>
           </div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Or run without arguments to open the GUI launcher with all your profiles.</div>
         </li>
-        <li>The browser will open automatically with all profile settings applied.</li>
+        <li>Chromium opens with this profile's proxy, fingerprint, and extensions applied. Fully isolated from other profiles.</li>
       </ol>
     </div>
     <div class="modal-footer">
@@ -1470,7 +1472,7 @@ function openLaunchModal(id) {
   const p = profiles.find(x => x.id === id);
   if (!p) return;
   document.getElementById('launch-profile-name').textContent = p.name;
-  document.getElementById('launch-cmd-text').textContent = `python launcher.py --server https://nickets.xyz --profile ${p.id}`;
+  document.getElementById('launch-cmd-text').textContent = `python antidetect-launcher.py --server https://nickets.xyz/ad --profile ${p.id} --launch`;
   showModal('launch-modal');
 }
 

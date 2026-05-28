@@ -1302,6 +1302,14 @@ if __name__ == "__main__":
 @app.route("/api/launch-script", methods=["GET"])
 def get_launch_script():
     """Return a downloadable Python launch script."""
+    launcher_path = os.path.join(BASE_DIR, "launcher", "launcher.py")
+    if os.path.isfile(launcher_path):
+        return send_from_directory(
+            os.path.join(BASE_DIR, "launcher"),
+            "launcher.py",
+            as_attachment=True,
+            download_name="antidetect-launcher.py",
+        )
     return app.response_class(
         response=LAUNCH_SCRIPT_TEMPLATE,
         status=200,
