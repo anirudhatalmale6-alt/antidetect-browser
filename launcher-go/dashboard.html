@@ -10,7 +10,7 @@
 
   /* Layout */
   .app { display: flex; height: 100vh; }
-  .sidebar { width: 240px; background: #111218; border-right: 1px solid #1f2033; display: flex; flex-direction: column; flex-shrink: 0; }
+  .sidebar { width: 230px; background: #111218; border-right: 1px solid #1f2033; display: flex; flex-direction: column; flex-shrink: 0; }
   .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
   /* Sidebar */
@@ -19,17 +19,10 @@
   .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, #7c3aed, #a855f7); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; color: #fff; font-weight: 700; }
   .logo span { font-size: 15px; font-weight: 700; color: #fff; }
 
-  .connect-row { display: flex; gap: 6px; }
-  .connect-row input { flex: 1; background: #0a0b10; border: 1px solid #2a2b3d; border-radius: 6px; padding: 7px 10px; color: #d1d5db; font-size: 12px; outline: none; min-width: 0; }
-  .connect-row input:focus { border-color: #7c3aed; }
-  .connect-row button { background: #7c3aed; color: #fff; border: none; border-radius: 6px; padding: 7px 12px; font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-  .connect-row button:hover { background: #6d28d9; }
-  .connect-row button:disabled { opacity: .5; cursor: not-allowed; }
-
   .sidebar-nav { flex: 1; overflow-y: auto; padding: 8px 0; }
   .nav-section-title { font-size: 10px; font-weight: 700; color: #52556a; text-transform: uppercase; letter-spacing: .08em; padding: 12px 16px 4px; }
 
-  .nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 16px; cursor: pointer; font-size: 13px; transition: background .1s; position: relative; }
+  .nav-item { display: flex; align-items: center; gap: 8px; padding: 7px 16px; cursor: pointer; font-size: 13px; transition: background .1s; position: relative; }
   .nav-item:hover { background: #1a1b28; }
   .nav-item.active { background: #1f1d35; color: #a78bfa; }
   .nav-item .count { margin-left: auto; font-size: 11px; color: #52556a; background: #1a1b28; padding: 1px 7px; border-radius: 10px; }
@@ -54,16 +47,16 @@
   .progress-mini-fill { height: 100%; background: linear-gradient(90deg, #7c3aed, #a855f7); border-radius: 2px; transition: width .3s; }
 
   /* Main toolbar */
-  .toolbar { display: flex; align-items: center; gap: 10px; padding: 14px 24px; border-bottom: 1px solid #1f2033; background: #0d0e14; }
-  .toolbar-title { font-size: 16px; font-weight: 600; color: #fff; flex-shrink: 0; }
-  .search-box { flex: 1; max-width: 320px; position: relative; }
-  .search-box input { width: 100%; background: #111218; border: 1px solid #2a2b3d; border-radius: 8px; padding: 8px 12px 8px 32px; color: #d1d5db; font-size: 13px; outline: none; }
+  .toolbar { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border-bottom: 1px solid #1f2033; background: #0d0e14; }
+  .toolbar-title { font-size: 15px; font-weight: 600; color: #fff; flex-shrink: 0; }
+  .search-box { flex: 1; max-width: 280px; position: relative; }
+  .search-box input { width: 100%; background: #111218; border: 1px solid #2a2b3d; border-radius: 8px; padding: 7px 12px 7px 32px; color: #d1d5db; font-size: 12px; outline: none; }
   .search-box input:focus { border-color: #7c3aed; }
-  .search-box::before { content: '\1F50D'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 13px; opacity: .4; }
+  .search-box::before { content: '\1F50D'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; opacity: .4; }
   .toolbar-actions { margin-left: auto; display: flex; gap: 8px; }
 
   /* Buttons */
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; transition: all .15s; white-space: nowrap; }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 14px; border-radius: 7px; font-size: 12px; font-weight: 600; border: none; cursor: pointer; transition: all .15s; white-space: nowrap; }
   .btn:disabled { opacity: .5; cursor: not-allowed; }
   .btn-primary { background: #7c3aed; color: #fff; }
   .btn-primary:hover:not(:disabled) { background: #6d28d9; }
@@ -73,31 +66,50 @@
   .btn-danger:hover:not(:disabled) { background: #b91c1c; }
   .btn-success { background: #16a34a; color: #fff; }
   .btn-success:hover:not(:disabled) { background: #15803d; }
-  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn-sm { padding: 5px 11px; font-size: 11px; }
   .btn-xs { padding: 4px 8px; font-size: 11px; border-radius: 5px; }
+  .btn-icon { padding: 4px 7px; font-size: 13px; background: transparent; color: #71717a; border: none; cursor: pointer; border-radius: 5px; }
+  .btn-icon:hover { background: #1f2033; color: #d1d5db; }
 
   /* Content area */
-  .content { flex: 1; overflow-y: auto; padding: 20px 24px; }
-  .profile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+  .content { flex: 1; overflow-y: auto; }
 
-  /* Profile card */
-  .profile-card { background: #111218; border: 1px solid #1f2033; border-radius: 12px; padding: 16px; transition: border-color .15s, box-shadow .15s; position: relative; }
-  .profile-card:hover { border-color: #2a2b3d; box-shadow: 0 4px 20px rgba(0,0,0,.3); }
-  .profile-card.running { border-color: #7c3aed44; }
-  .card-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
-  .card-name { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 2px; }
-  .card-folder { font-size: 11px; color: #52556a; }
-  .card-badge { padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
+  /* Profile table */
+  .profile-table { width: 100%; border-collapse: collapse; }
+  .profile-table-head { position: sticky; top: 0; z-index: 2; }
+  .profile-table-head th { background: #0d0e14; text-align: left; padding: 9px 12px; font-size: 10px; font-weight: 700; color: #52556a; text-transform: uppercase; letter-spacing: .06em; border-bottom: 1px solid #1f2033; white-space: nowrap; user-select: none; }
+  .profile-table-head th:first-child { padding-left: 20px; }
+  .profile-table-head th:last-child { padding-right: 20px; text-align: right; }
+
+  .profile-row { border-bottom: 1px solid #13141c; transition: background .1s; cursor: default; }
+  .profile-row:hover { background: #131420; }
+  .profile-row.running { background: #110e1e; }
+  .profile-row.running:hover { background: #15112a; }
+  .profile-row td { padding: 10px 12px; font-size: 12px; vertical-align: middle; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .profile-row td:first-child { padding-left: 20px; }
+  .profile-row td:last-child { padding-right: 20px; }
+
+  .profile-name-cell { display: flex; align-items: center; gap: 10px; }
+  .profile-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .profile-status-dot.ready { background: #3f3f46; }
+  .profile-status-dot.active { background: #a78bfa; box-shadow: 0 0 6px #a78bfa88; }
+  .profile-name-info { display: flex; flex-direction: column; min-width: 0; }
+  .profile-name-text { font-size: 13px; font-weight: 600; color: #e5e7eb; overflow: hidden; text-overflow: ellipsis; }
+  .profile-folder-text { font-size: 10px; color: #52556a; margin-top: 1px; }
+
+  .col-proxy { color: #a1a1aa; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 11px; max-width: 180px; }
+  .col-os { color: #9ca3af; }
+  .col-screen { color: #9ca3af; font-family: 'SF Mono', monospace; font-size: 11px; }
+  .col-tz { color: #9ca3af; max-width: 140px; }
+  .col-status { }
+  .status-badge { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
   .badge-ready { background: #052e16; color: #4ade80; }
   .badge-running { background: #1e1050; color: #a78bfa; }
 
-  .card-details { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin-bottom: 12px; }
-  .card-detail { display: flex; flex-direction: column; }
-  .card-detail-label { font-size: 10px; color: #52556a; text-transform: uppercase; letter-spacing: .05em; }
-  .card-detail-value { font-size: 12px; color: #a1a1aa; font-family: 'SF Mono', 'Fira Code', monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-  .card-actions { display: flex; gap: 6px; }
-  .card-actions .btn { flex: 1; }
+  .col-actions { text-align: right; white-space: nowrap; }
+  .col-actions .row-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; opacity: 0; transition: opacity .15s; }
+  .profile-row:hover .row-actions { opacity: 1; }
+  .profile-row.running .row-actions { opacity: 1; }
 
   /* Empty state */
   .empty-state { text-align: center; padding: 80px 20px; }
@@ -216,7 +228,7 @@
       <div class="empty-state">
         <div class="empty-icon">&#9672;</div>
         <div class="empty-title">Connect to get started</div>
-        <div class="empty-sub">Enter your server URL and click Connect</div>
+        <div class="empty-sub">Loading your profiles</div>
       </div>
     </div>
   </main>
@@ -335,7 +347,6 @@ var App = (function() {
     search: ''
   };
 
-  // Helpers
   function esc(s) {
     if (!s) return '';
     var d = document.createElement('div');
@@ -387,7 +398,7 @@ var App = (function() {
       });
   }
 
-  // Refresh data
+  // Refresh
   function refresh() {
     if (!state.connected) return Promise.resolve();
     return Promise.all([
@@ -478,7 +489,18 @@ var App = (function() {
       return;
     }
 
-    var html = '<div class="profile-grid">';
+    var html = '<table class="profile-table">';
+    html += '<thead class="profile-table-head"><tr>';
+    html += '<th style="width:30%">Profile</th>';
+    html += '<th>OS</th>';
+    html += '<th>Proxy</th>';
+    html += '<th>Screen</th>';
+    html += '<th>Timezone</th>';
+    html += '<th>Status</th>';
+    html += '<th style="width:140px">Actions</th>';
+    html += '</tr></thead>';
+    html += '<tbody>';
+
     for (var i = 0; i < list.length; i++) {
       var p = list[i];
       var isRunning = !!state.running[p.id];
@@ -491,39 +513,51 @@ var App = (function() {
       var platform = nav.platform || 'Win32';
       var osLabel = platform === 'MacIntel' ? 'macOS' : (platform === 'Linux x86_64' ? 'Linux' : 'Windows');
       var proxy = p.proxy || 'Direct';
-      if (proxy.length > 28) proxy = proxy.substring(0, 28) + '...';
-      var gpu = (webgl.renderer || '').replace(/ANGLE \(/, '').replace(/\)$/, '');
-      if (gpu.length > 34) gpu = gpu.substring(0, 34) + '...';
-      if (!gpu) gpu = 'Auto';
+      if (proxy.length > 26) proxy = proxy.substring(0, 26) + '...';
       var res = (scr.width || '?') + 'x' + (scr.height || '?');
       var timezone = tz.id || tz.name || 'Auto';
+      if (timezone.length > 18) timezone = timezone.substring(0, 18) + '...';
 
-      html += '<div class="profile-card' + (isRunning ? ' running' : '') + '">';
-      html += '<div class="card-header"><div><div class="card-name">' + esc(p.name) + '</div>';
-      html += '<div class="card-folder">' + esc(p.folder_name || 'No folder') + '</div></div>';
-      html += '<span class="card-badge ' + (isRunning ? 'badge-running' : 'badge-ready') + '">' + (isRunning ? 'Running' : 'Ready') + '</span></div>';
+      html += '<tr class="profile-row' + (isRunning ? ' running' : '') + '">';
 
-      html += '<div class="card-details">';
-      html += '<div class="card-detail"><span class="card-detail-label">OS</span><span class="card-detail-value">' + esc(osLabel) + '</span></div>';
-      html += '<div class="card-detail"><span class="card-detail-label">Proxy</span><span class="card-detail-value">' + esc(proxy) + '</span></div>';
-      html += '<div class="card-detail"><span class="card-detail-label">GPU</span><span class="card-detail-value">' + esc(gpu) + '</span></div>';
-      html += '<div class="card-detail"><span class="card-detail-label">Screen</span><span class="card-detail-value">' + esc(res) + '</span></div>';
-      html += '<div class="card-detail"><span class="card-detail-label">Timezone</span><span class="card-detail-value">' + esc(timezone) + '</span></div>';
-      html += '<div class="card-detail"><span class="card-detail-label">Window</span><span class="card-detail-value">' + p.window_width + 'x' + p.window_height + '</span></div>';
-      html += '</div>';
+      // Profile name + folder
+      html += '<td><div class="profile-name-cell">';
+      html += '<span class="profile-status-dot ' + (isRunning ? 'active' : 'ready') + '"></span>';
+      html += '<div class="profile-name-info">';
+      html += '<span class="profile-name-text">' + esc(p.name) + '</span>';
+      html += '<span class="profile-folder-text">' + esc(p.folder_name || 'No folder') + '</span>';
+      html += '</div></div></td>';
 
-      html += '<div class="card-actions">';
+      // OS
+      html += '<td class="col-os">' + esc(osLabel) + '</td>';
+
+      // Proxy
+      html += '<td class="col-proxy">' + esc(proxy) + '</td>';
+
+      // Screen
+      html += '<td class="col-screen">' + esc(res) + '</td>';
+
+      // Timezone
+      html += '<td class="col-tz">' + esc(timezone) + '</td>';
+
+      // Status
+      html += '<td class="col-status"><span class="status-badge ' + (isRunning ? 'badge-running' : 'badge-ready') + '">' + (isRunning ? 'Running' : 'Ready') + '</span></td>';
+
+      // Actions
+      html += '<td class="col-actions"><div class="row-actions">';
       if (isRunning) {
-        html += '<button class="btn btn-danger btn-sm" onclick="App.stopProfile(\'' + p.id + '\')">Stop</button>';
+        html += '<button class="btn btn-danger btn-xs" onclick="App.stopProfile(\'' + p.id + '\')">Stop</button>';
       } else {
-        html += '<button class="btn btn-success btn-sm" onclick="App.launchProfile(\'' + p.id + '\')">Launch</button>';
+        html += '<button class="btn btn-success btn-xs" onclick="App.launchProfile(\'' + p.id + '\')">Start</button>';
       }
-      html += '<button class="btn btn-ghost btn-sm" onclick="App.showEditModal(\'' + p.id + '\')">Edit</button>';
-      html += '<button class="btn btn-ghost btn-sm" onclick="App.showFpDetails(\'' + p.id + '\')">FP</button>';
-      html += '<button class="btn btn-ghost btn-xs" onclick="App.confirmDeleteProfile(\'' + p.id + '\',\'' + esc(p.name).replace(/'/g, "\\'") + '\')" style="color:#71717a;">&times;</button>';
-      html += '</div></div>';
+      html += '<button class="btn-icon" onclick="App.showEditModal(\'' + p.id + '\')" title="Edit">&#9998;</button>';
+      html += '<button class="btn-icon" onclick="App.showFpDetails(\'' + p.id + '\')" title="Fingerprint">&#9878;</button>';
+      html += '<button class="btn-icon" onclick="App.confirmDeleteProfile(\'' + p.id + '\',\'' + esc(p.name).replace(/'/g, "\\'") + '\')" title="Delete" style="color:#52556a;">&#128465;</button>';
+      html += '</div></td>';
+
+      html += '</tr>';
     }
-    html += '</div>';
+    html += '</tbody></table>';
     el.innerHTML = html;
   }
 
@@ -535,7 +569,15 @@ var App = (function() {
   // Launch / Stop
   function launchProfile(id) {
     api('POST', '/api/launch', { profile_id: id })
-      .then(function() { toast('Profile launched', 'success'); pollStatus(); })
+      .then(function(data) {
+        var msg = 'Profile launched';
+        var exts = data.extensions_loaded || [];
+        if (exts.length > 0) {
+          msg += ' with ' + exts.length + ' extension(s): ' + exts.join(', ');
+        }
+        toast(msg, 'success');
+        pollStatus();
+      })
       .catch(function(err) {
         if (err.message.indexOf('not downloaded') >= 0) {
           toast('Chromium not installed. Click Download Chromium.', 'error');
@@ -551,7 +593,7 @@ var App = (function() {
       .catch(function(err) { toast('Stop failed: ' + err.message, 'error'); });
   }
 
-  // Create / Edit Profile
+  // Create / Edit
   function showCreateModal() {
     document.getElementById('editProfileId').value = '';
     document.getElementById('modalTitle').textContent = 'New Profile';
@@ -805,7 +847,7 @@ var App = (function() {
   function openExtensionsFolder() {
     api('POST', '/api/open-extensions')
       .then(function(data) {
-        toast('Extensions folder opened: ' + (data.path || ''), 'success');
+        toast('Extensions folder opened', 'success');
       })
       .catch(function(err) { toast('Could not open folder: ' + err.message, 'error'); });
   }
@@ -813,7 +855,6 @@ var App = (function() {
   // Status polling
   function pollStatus() {
     fetch('/api/status').then(function(r) { return r.json(); }).then(function(s) {
-      // Chromium status
       var dotCh = document.getElementById('dotChromium');
       var chText = document.getElementById('chromiumStatus');
       var chProg = document.getElementById('chromiumProgress');
@@ -843,14 +884,12 @@ var App = (function() {
         chBtn.style.display = '';
       }
 
-      // Server status
       if (s.server_connected && !state.connected) {
         state.connected = true;
         document.getElementById('dotServer').className = 'dot dot-green';
         document.getElementById('serverStatus').textContent = 'Connected';
       }
 
-      // Running profiles
       state.running = {};
       if (s.running) {
         for (var i = 0; i < s.running.length; i++) {
@@ -865,20 +904,18 @@ var App = (function() {
   function openModal(id) { document.getElementById(id).classList.add('show'); }
   function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
-  // Init - auto-connect on startup
+  // Init
   pollStatus();
   loadExtensions();
   setInterval(pollStatus, 2500);
   setTimeout(function() { connect(); }, 300);
 
-  // Close modals on overlay click
   document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
     overlay.addEventListener('click', function(e) {
       if (e.target === overlay) closeModal(overlay.id);
     });
   });
 
-  // Expose public API
   return {
     connect: connect,
     refresh: refresh,

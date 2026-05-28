@@ -652,25 +652,53 @@ type UserExtension struct {
 	Enabled bool   `json:"enabled"`
 }
 
+func findManifestInDir(dir string) string {
+	manifest := filepath.Join(dir, "manifest.json")
+	if _, err := os.Stat(manifest); err == nil {
+		return dir
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return ""
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		sub := filepath.Join(dir, entry.Name())
+		manifest = filepath.Join(sub, "manifest.json")
+		if _, err := os.Stat(manifest); err == nil {
+			return sub
+		}
+	}
+	return ""
+}
+
 func listUserExtensions() []UserExtension {
 	extDir := extensionsDir()
 	os.MkdirAll(extDir, 0755)
 
 	entries, err := os.ReadDir(extDir)
 	if err != nil {
+		log.Printf("Cannot read extensions dir %s: %v", extDir, err)
 		return nil
 	}
+
+	log.Printf("Scanning extensions dir: %s (%d entries)", extDir, len(entries))
 
 	var exts []UserExtension
 	for _, entry := range entries {
 		if !entry.IsDir() {
+			log.Printf("  Skipping non-dir: %s", entry.Name())
 			continue
 		}
 		extPath := filepath.Join(extDir, entry.Name())
-		manifestPath := filepath.Join(extPath, "manifest.json")
-		if _, err := os.Stat(manifestPath); os.IsNotExist(err) {
+		resolved := findManifestInDir(extPath)
+		if resolved == "" {
+			log.Printf("  No manifest.json found in %s (or one level deeper)", entry.Name())
 			continue
 		}
+		manifestPath := filepath.Join(resolved, "manifest.json")
 		name := entry.Name()
 		version := ""
 		data, err := os.ReadFile(manifestPath)
@@ -685,13 +713,15 @@ func listUserExtensions() []UserExtension {
 				}
 			}
 		}
+		log.Printf("  Found extension: %s v%s at %s", name, version, resolved)
 		exts = append(exts, UserExtension{
 			Name:    name,
-			Path:    extPath,
+			Path:    resolved,
 			Version: version,
 			Enabled: true,
 		})
 	}
+	log.Printf("Total user extensions found: %d", len(exts))
 	return exts
 }
 
@@ -699,73 +729,71 @@ func listUserExtensions() []UserExtension {
 // Profile launching
 // ---------------------------------------------------------------------------
 
-func launchProfile(profileID string) error {
+type LaunchResult struct {
+	ExtensionsLoaded []string `json:"extensions_loaded"`
+}
+
+func launchProfile(profileID string) (*LaunchResult, error) {
 	mu.Lock()
 	if _, ok := processes[profileID]; ok {
 		mu.Unlock()
-		return fmt.Errorf("profile %s is already running", profileID)
+		return nil, fmt.Errorf("profile %s is already running", profileID)
 	}
 	if !chromiumReady {
 		mu.Unlock()
-		return fmt.Errorf("chromium is not downloaded yet")
+		return nil, fmt.Errorf("chromium is not downloaded yet")
 	}
 	srvURL := serverURL
 	mu.Unlock()
 
 	if srvURL == "" {
-		return fmt.Errorf("not connected to server")
+		return nil, fmt.Errorf("not connected to server")
 	}
 
-	// Fetch the full profile from the remote server
 	profileURL := srvURL + "/api/profiles/" + profileID
 	log.Printf("Fetching profile from %s", profileURL)
 
 	resp, err := httpClient.Get(profileURL)
 	if err != nil {
-		return fmt.Errorf("failed to fetch profile: %v", err)
+		return nil, fmt.Errorf("failed to fetch profile: %v", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to read profile response: %v", err)
+		return nil, fmt.Errorf("failed to read profile response: %v", err)
 	}
 
 	if resp.StatusCode != 200 {
-		return fmt.Errorf("server returned %d: %s", resp.StatusCode, string(body))
+		return nil, fmt.Errorf("server returned %d: %s", resp.StatusCode, string(body))
 	}
 
-	// Server returns {"profile": {...}}
 	var envelope struct {
 		Profile Profile `json:"profile"`
 	}
 	if err := json.Unmarshal(body, &envelope); err != nil {
-		return fmt.Errorf("invalid profile JSON: %v", err)
+		return nil, fmt.Errorf("invalid profile JSON: %v", err)
 	}
 	profile := envelope.Profile
 	if profile.ID == "" {
-		// Fallback: try parsing as bare profile
 		if err := json.Unmarshal(body, &profile); err != nil {
-			return fmt.Errorf("could not parse profile: %v", err)
+			return nil, fmt.Errorf("could not parse profile: %v", err)
 		}
 	}
 
-	// Create profile data directory
 	profileDir := filepath.Join(dataDir, "profiles", profile.ID)
 	os.MkdirAll(profileDir, 0755)
 
-	// Fingerprint extension
 	fpDir, err := ensureFPExtension()
 	if err != nil {
-		return fmt.Errorf("fp extension: %v", err)
+		return nil, fmt.Errorf("fp extension: %v", err)
 	}
 	if len(profile.Fingerprint) > 0 && string(profile.Fingerprint) != "null" {
 		if err := writeFPConfig(fpDir, profile.Fingerprint); err != nil {
-			return fmt.Errorf("fp config: %v", err)
+			return nil, fmt.Errorf("fp config: %v", err)
 		}
 	}
 
-	// Build chrome args
 	args := []string{
 		"--user-data-dir=" + profileDir,
 		"--no-first-run",
@@ -785,17 +813,17 @@ func launchProfile(profileID string) error {
 	}
 
 	extensions := []string{fpDir}
+	var loadedExtNames []string
 
-	// Load user extensions from extensions folder
 	userExts := listUserExtensions()
 	for _, ext := range userExts {
 		if ext.Enabled {
 			extensions = append(extensions, ext.Path)
+			loadedExtNames = append(loadedExtNames, ext.Name)
 			log.Printf("Loading user extension: %s (%s)", ext.Name, ext.Path)
 		}
 	}
 
-	// Proxy
 	if profile.Proxy != "" {
 		parts := strings.SplitN(profile.Proxy, ":", 4)
 		if len(parts) >= 2 {
@@ -804,7 +832,7 @@ func launchProfile(profileID string) error {
 		if len(parts) == 4 {
 			proxyAuthDir, err := ensureProxyAuthExtension(profile.ID, profile.Proxy)
 			if err != nil {
-				return fmt.Errorf("proxy auth extension: %v", err)
+				return nil, fmt.Errorf("proxy auth extension: %v", err)
 			}
 			if proxyAuthDir != "" {
 				extensions = append(extensions, proxyAuthDir)
@@ -814,7 +842,6 @@ func launchProfile(profileID string) error {
 
 	args = append(args, "--load-extension="+strings.Join(extensions, ","))
 
-	// Write initial preferences to avoid first-run dialogs
 	prefsDir := filepath.Join(profileDir, "Default")
 	os.MkdirAll(prefsDir, 0755)
 	prefs := `{
@@ -829,20 +856,19 @@ func launchProfile(profileID string) error {
 		os.WriteFile(prefsPath, []byte(prefs), 0644)
 	}
 
-	log.Printf("Launching profile %s (%s): %s %v", profile.ID, profile.Name, chromiumPath, args)
+	log.Printf("Launching profile %s (%s) with %d user extensions: %s %v", profile.ID, profile.Name, len(loadedExtNames), chromiumPath, args)
 
 	cmd := exec.Command(chromiumPath, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("start chrome: %v", err)
+		return nil, fmt.Errorf("start chrome: %v", err)
 	}
 
 	mu.Lock()
 	processes[profile.ID] = cmd.Process
 	mu.Unlock()
 
-	// Wait for process in background to clean up on exit
 	go func() {
 		cmd.Wait()
 		mu.Lock()
@@ -851,7 +877,7 @@ func launchProfile(profileID string) error {
 		log.Printf("Profile %s (%s) exited", profile.ID, profile.Name)
 	}()
 
-	return nil
+	return &LaunchResult{ExtensionsLoaded: loadedExtNames}, nil
 }
 
 func stopProfile(profileID string) error {
@@ -969,12 +995,21 @@ func handleLaunch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := launchProfile(req.ProfileID); err != nil {
+	result, err := launchProfile(req.ProfileID)
+	if err != nil {
 		jsonError(w, err.Error(), 500)
 		return
 	}
 
-	jsonOK(w, map[string]string{"status": "launched", "profile_id": req.ProfileID})
+	extNames := []string{}
+	if result != nil && result.ExtensionsLoaded != nil {
+		extNames = result.ExtensionsLoaded
+	}
+	jsonOK(w, map[string]interface{}{
+		"status":            "launched",
+		"profile_id":        req.ProfileID,
+		"extensions_loaded": extNames,
+	})
 }
 
 func handleStop(w http.ResponseWriter, r *http.Request) {
