@@ -1056,7 +1056,7 @@ func openBrowser(url string) {
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	log.Println("AntiDetect Browser Launcher starting...")
+	log.Println("Nickets Browser starting...")
 	log.Printf("Data directory: %s", dataDir)
 
 	os.MkdirAll(dataDir, 0755)
@@ -1089,7 +1089,7 @@ func main() {
 		openBrowser(url)
 	}()
 
-	fmt.Printf("\n  AntiDetect Launcher is running.\n  Open your browser to: %s\n  Press Ctrl+C to quit.\n\n", url)
+	fmt.Printf("\n  Nickets is running.\n  Open your browser to: %s\n  Press Ctrl+C to quit.\n\n", url)
 
 	server := &http.Server{Handler: mux}
 	if err := server.Serve(listener); err != nil {
