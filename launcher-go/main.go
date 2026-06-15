@@ -1426,11 +1426,11 @@ func findAppBrowser() string {
 		}
 	}
 	candidates := []string{
+		filepath.Join(os.Getenv("PROGRAMFILES(X86)"), "Microsoft", "Edge", "Application", "msedge.exe"),
+		filepath.Join(os.Getenv("PROGRAMFILES"), "Microsoft", "Edge", "Application", "msedge.exe"),
 		filepath.Join(os.Getenv("PROGRAMFILES"), "Google", "Chrome", "Application", "chrome.exe"),
 		filepath.Join(os.Getenv("PROGRAMFILES(X86)"), "Google", "Chrome", "Application", "chrome.exe"),
 		filepath.Join(os.Getenv("LOCALAPPDATA"), "Google", "Chrome", "Application", "chrome.exe"),
-		filepath.Join(os.Getenv("PROGRAMFILES(X86)"), "Microsoft", "Edge", "Application", "msedge.exe"),
-		filepath.Join(os.Getenv("PROGRAMFILES"), "Microsoft", "Edge", "Application", "msedge.exe"),
 	}
 	for _, p := range candidates {
 		if _, err := os.Stat(p); err == nil {
@@ -1446,12 +1446,28 @@ func openBrowser(url string) {
 		if browser != "" {
 			appDataDir := filepath.Join(dataDir, "app-window")
 			os.MkdirAll(appDataDir, 0755)
+
+			prefsDir := filepath.Join(appDataDir, "Default")
+			os.MkdirAll(prefsDir, 0755)
+			prefs := `{"browser":{"check_default_browser":false},"profile":{"name":"Nickets"}}`
+			prefsPath := filepath.Join(prefsDir, "Preferences")
+			if _, err := os.Stat(prefsPath); os.IsNotExist(err) {
+				os.WriteFile(prefsPath, []byte(prefs), 0644)
+			}
+
 			cmd := exec.Command(browser,
 				"--app="+url,
 				"--user-data-dir="+appDataDir,
 				"--window-size=1440,900",
+				"--window-position=100,50",
 				"--disable-extensions",
 				"--disable-infobars",
+				"--disable-features=TranslateUI,MediaRouter",
+				"--disable-background-networking",
+				"--disable-sync",
+				"--disable-default-apps",
+				"--no-default-browser-check",
+				"--no-first-run",
 				"--new-window",
 			)
 			cmd.Env = append(os.Environ(),
@@ -1460,6 +1476,12 @@ func openBrowser(url string) {
 				"GOOGLE_DEFAULT_CLIENT_SECRET=no",
 			)
 			cmd.Start()
+
+			go func() {
+				cmd.Wait()
+				log.Println("App window closed")
+				os.Exit(0)
+			}()
 			return
 		}
 	}
