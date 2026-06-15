@@ -608,27 +608,27 @@ func ensureProxyAuthExtension(profileID, proxyStr string) (string, error) {
 	os.MkdirAll(extDir, 0755)
 
 	manifest := `{
-  "manifest_version": 3,
+  "manifest_version": 2,
   "name": "Proxy Auth Helper",
   "version": "1.0",
-  "permissions": ["webRequest", "webRequestAuthProvider"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": ["webRequest", "webRequestBlocking", "<all_urls>"],
   "background": {
-    "service_worker": "background.js"
+    "scripts": ["background.js"],
+    "persistent": true
   }
 }`
 
 	bg := fmt.Sprintf(`chrome.webRequest.onAuthRequired.addListener(
-  function(details, callback) {
-    callback({
+  function(details) {
+    return {
       authCredentials: {
         username: %q,
         password: %q
       }
-    });
+    };
   },
   { urls: ["<all_urls>"] },
-  ["asyncBlocking"]
+  ["blocking"]
 );`, user, pass)
 
 	if err := os.WriteFile(filepath.Join(extDir, "manifest.json"), []byte(manifest), 0644); err != nil {
@@ -835,9 +835,6 @@ func uploadProfileSync(profileID, profileDir string) {
 
 func findBuiltinDistribte() string {
 	userCopy := filepath.Join(dataDir, "builtin-extensions", "distribte")
-	if _, err := os.Stat(filepath.Join(userCopy, "manifest.json")); err == nil {
-		return userCopy
-	}
 
 	sources := []string{
 		filepath.Join(filepath.Dir(os.Args[0]), "builtin-extensions", "distribte"),
