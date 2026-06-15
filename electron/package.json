@@ -1,0 +1,55 @@
+{
+  "name": "nickets",
+  "version": "2.0.0",
+  "description": "Nickets Anti-Detect Browser",
+  "main": "main.js",
+  "author": "Nickets",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64"
+  },
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.nickets.antidetect",
+    "productName": "Nickets",
+    "artifactName": "NicketsSetup.${ext}",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": true,
+      "shortcutName": "Nickets",
+      "menuCategory": true
+    },
+    "extraResources": [
+      {
+        "from": "../launcher-go/nickets-server.exe",
+        "to": "nickets-server.exe"
+      },
+      {
+        "from": "../launcher-go/builtin-extensions",
+        "to": "builtin-extensions",
+        "filter": ["**/*"]
+      },
+      {
+        "from": "../launcher-go/PROXY.csv",
+        "to": "PROXY.csv"
+      }
+    ]
+  }
+}

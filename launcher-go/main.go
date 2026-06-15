@@ -865,6 +865,9 @@ func findBuiltinDistribte() string {
 	sources := []string{
 		filepath.Join(filepath.Dir(os.Args[0]), "builtin-extensions", "distribte"),
 	}
+	if resDir := os.Getenv("NICKETS_RESOURCES"); resDir != "" {
+		sources = append(sources, filepath.Join(resDir, "builtin-extensions", "distribte"))
+	}
 	if installDir := os.Getenv("PROGRAMFILES"); installDir != "" {
 		sources = append(sources, filepath.Join(installDir, "Nickets", "builtin-extensions", "distribte"))
 	}
@@ -1511,12 +1514,20 @@ func setupFileLogging() {
 }
 
 func main() {
+	serverMode := false
+	for _, arg := range os.Args[1:] {
+		if arg == "--server" {
+			serverMode = true
+		}
+	}
+
 	os.MkdirAll(dataDir, 0755)
 	os.MkdirAll(extensionsDir(), 0755)
 	setupFileLogging()
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	log.Println("Nickets starting...")
 	log.Printf("Data directory: %s", dataDir)
+	log.Printf("Server mode: %v", serverMode)
 
 	checkChromium()
 
@@ -1552,11 +1563,18 @@ func main() {
 	url := "http://" + addr
 	log.Printf("GUI available at %s", url)
 
-	// Open app window after a brief delay
-	go func() {
-		time.Sleep(500 * time.Millisecond)
-		openBrowser(url)
-	}()
+	if serverMode {
+		_, portStr, _ := net.SplitHostPort(addr)
+		portFile := filepath.Join(dataDir, ".port")
+		os.WriteFile(portFile, []byte(portStr), 0644)
+		fmt.Fprintf(os.Stdout, "PORT:%s\n", portStr)
+		log.Printf("Server mode: port %s written to %s", portStr, portFile)
+	} else {
+		go func() {
+			time.Sleep(500 * time.Millisecond)
+			openBrowser(url)
+		}()
+	}
 
 	server := &http.Server{Handler: mux}
 	if err := server.Serve(listener); err != nil {
