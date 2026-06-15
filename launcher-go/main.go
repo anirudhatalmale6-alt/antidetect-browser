@@ -802,6 +802,8 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 		"--disable-sync",
 		"--disable-translate",
 		"--disable-infobars",
+		"--disable-features=MediaRouter",
+		"--disable-gpu-shader-disk-cache",
 	}
 
 	if profile.WindowWidth > 0 && profile.WindowHeight > 0 {
@@ -859,6 +861,11 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 	log.Printf("Launching profile %s (%s) with %d user extensions: %s %v", profile.ID, profile.Name, len(loadedExtNames), chromiumPath, args)
 
 	cmd := exec.Command(chromiumPath, args...)
+	cmd.Env = append(os.Environ(),
+		"GOOGLE_API_KEY=no",
+		"GOOGLE_DEFAULT_CLIENT_ID=no",
+		"GOOGLE_DEFAULT_CLIENT_SECRET=no",
+	)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
