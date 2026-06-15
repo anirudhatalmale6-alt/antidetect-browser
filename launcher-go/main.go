@@ -869,9 +869,19 @@ func updateDistribteConfig(extensionPaths []string) {
 		if _, err := os.Stat(filepath.Join(extPath, "js")); err == nil {
 			manifestPath := filepath.Join(extPath, "manifest.json")
 			if data, err := os.ReadFile(manifestPath); err == nil {
-				if strings.Contains(strings.ToLower(string(data)), "distribte") {
+				manifest := string(data)
+				if strings.Contains(strings.ToLower(manifest), "distribte") {
 					os.WriteFile(configPath, []byte(jsContent), 0644)
 					log.Printf("Updated Distribte config in %s", extPath)
+
+					if !strings.Contains(manifest, "nickets.xyz") {
+						manifest = strings.Replace(manifest,
+							`"https://*.multiloginapp.com/*"`,
+							`"https://*.multiloginapp.com/*",`+"\n"+`            "https://nickets.xyz/*"`,
+							1)
+						os.WriteFile(manifestPath, []byte(manifest), 0644)
+						log.Printf("Patched Distribte manifest to include nickets.xyz")
+					}
 				}
 			}
 		}
