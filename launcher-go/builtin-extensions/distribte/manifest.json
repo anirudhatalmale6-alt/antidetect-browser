@@ -44,8 +44,6 @@
     "content_scripts": [
         {
             "matches": [
-                "https://*.multiloginapp.com/*",
-                "https://app.multiloginapp.com/*",
                 "https://nickets.xyz/*"
             ],
             "js": [

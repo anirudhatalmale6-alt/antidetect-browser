@@ -834,23 +834,50 @@ func uploadProfileSync(profileID, profileDir string) {
 // extractZip already defined above
 
 func findBuiltinDistribte() string {
-	candidates := []string{
-		filepath.Join(dataDir, "builtin-extensions", "distribte"),
+	userCopy := filepath.Join(dataDir, "builtin-extensions", "distribte")
+	if _, err := os.Stat(filepath.Join(userCopy, "manifest.json")); err == nil {
+		return userCopy
+	}
+
+	sources := []string{
 		filepath.Join(filepath.Dir(os.Args[0]), "builtin-extensions", "distribte"),
 	}
 	if installDir := os.Getenv("PROGRAMFILES"); installDir != "" {
-		candidates = append(candidates, filepath.Join(installDir, "Nickets", "builtin-extensions", "distribte"))
+		sources = append(sources, filepath.Join(installDir, "Nickets", "builtin-extensions", "distribte"))
 	}
 	if installDir := os.Getenv("PROGRAMFILES(X86)"); installDir != "" {
-		candidates = append(candidates, filepath.Join(installDir, "Nickets", "builtin-extensions", "distribte"))
+		sources = append(sources, filepath.Join(installDir, "Nickets", "builtin-extensions", "distribte"))
 	}
-	for _, p := range candidates {
-		if _, err := os.Stat(filepath.Join(p, "manifest.json")); err == nil {
-			log.Printf("Found built-in Distribte at %s", p)
-			return p
+
+	for _, src := range sources {
+		if _, err := os.Stat(filepath.Join(src, "manifest.json")); err == nil {
+			os.MkdirAll(filepath.Dir(userCopy), 0755)
+			copyDir(src, userCopy)
+			log.Printf("Copied built-in Distribte from %s to %s", src, userCopy)
+			return userCopy
 		}
 	}
 	return ""
+}
+
+func copyDir(src, dst string) {
+	filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		rel, _ := filepath.Rel(src, path)
+		target := filepath.Join(dst, rel)
+		if info.IsDir() {
+			os.MkdirAll(target, 0755)
+		} else {
+			os.MkdirAll(filepath.Dir(target), 0755)
+			data, err := os.ReadFile(path)
+			if err == nil {
+				os.WriteFile(target, data, 0644)
+			}
+		}
+		return nil
+	})
 }
 
 func updateDistribteConfig(extensionPaths []string) {
