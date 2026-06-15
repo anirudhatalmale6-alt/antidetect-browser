@@ -1227,6 +1227,43 @@ var App = (function() {
     reader.readAsText(file);
   }
 
+  // ─── Proxy List ──────────────────────────────────────────────────────
+  var nicketsProxies = [];
+
+  function loadProxyList() {
+    fetch('/api/proxy-list').then(function(r){return r.json();}).then(function(d) {
+      nicketsProxies = d.proxies || [];
+    }).catch(function(){});
+  }
+
+  function toggleProxyInput() {
+    var mode = document.getElementById('profileProxyMode').value;
+    var input = document.getElementById('profileProxy');
+    var hint = document.getElementById('proxyHint');
+    if (mode === 'custom') {
+      input.style.display = '';
+      hint.textContent = 'Format: host:port:user:pass';
+    } else if (mode === 'nickets') {
+      input.style.display = 'none';
+      hint.textContent = 'Random proxy from Nickets list (' + nicketsProxies.length + ' proxies loaded)';
+    } else {
+      input.style.display = 'none';
+      hint.textContent = 'No proxy will be used';
+    }
+  }
+
+  function getProxyValue() {
+    var mode = document.getElementById('profileProxyMode').value;
+    if (mode === 'nickets' && nicketsProxies.length) {
+      return nicketsProxies[Math.floor(Math.random() * nicketsProxies.length)];
+    } else if (mode === 'custom') {
+      return document.getElementById('profileProxy').value.trim();
+    }
+    return '';
+  }
+
+  loadProxyList();
+
   // Graceful shutdown when window closes
   window.addEventListener('beforeunload', function() {
     navigator.sendBeacon('/api/quit', '{}');
@@ -1484,45 +1521,6 @@ var App = (function() {
     deleteGroupAction: deleteGroupAction,
     editGroupPerms: editGroupPerms
   };
-  var nicketsProxies = [];
-
-  function loadProxyList() {
-    fetch('/api/proxy-list').then(function(r){return r.json();}).then(function(d) {
-      nicketsProxies = d.proxies || [];
-      var hint = document.getElementById('proxyHint');
-      if (hint && nicketsProxies.length) {
-        hint.setAttribute('data-count', nicketsProxies.length);
-      }
-    }).catch(function(){});
-  }
-
-  function toggleProxyInput() {
-    var mode = document.getElementById('profileProxyMode').value;
-    var input = document.getElementById('profileProxy');
-    var hint = document.getElementById('proxyHint');
-    if (mode === 'custom') {
-      input.style.display = '';
-      hint.textContent = 'Format: host:port:user:pass';
-    } else if (mode === 'nickets') {
-      input.style.display = 'none';
-      hint.textContent = 'Random proxy from Nickets list (' + nicketsProxies.length + ' proxies loaded)';
-    } else {
-      input.style.display = 'none';
-      hint.textContent = 'No proxy will be used';
-    }
-  }
-
-  function getProxyValue() {
-    var mode = document.getElementById('profileProxyMode').value;
-    if (mode === 'nickets' && nicketsProxies.length) {
-      return nicketsProxies[Math.floor(Math.random() * nicketsProxies.length)];
-    } else if (mode === 'custom') {
-      return document.getElementById('profileProxy').value.trim();
-    }
-    return '';
-  }
-
-  loadProxyList();
 
   function showBulkModal() {
     document.getElementById('bulkIds').value = '';
