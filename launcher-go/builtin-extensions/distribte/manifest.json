@@ -44,26 +44,6 @@
     "content_scripts": [
         {
             "matches": [
-                "https://nickets.xyz/*"
-            ],
-            "js": [
-                "/js/wake-bg.js"
-            ],
-            "run_at": "document_end",
-            "all_frames": false
-        },
-        {
-            "matches": [
-                "https://whoerip.com/*",
-                "https://*.whoerip.com/*"
-            ],
-            "js": [
-                "/js/auto-trigger.js"
-            ],
-            "run_at": "document_end"
-        },
-        {
-            "matches": [
                 "https://www.ticketmaster.com/*",
                 "https://www.ticketmaster.ca/*",
                 "https://www.ticketmaster.com.au/*",
