@@ -741,7 +741,8 @@ func downloadProfileSync(profileID, profileDir string) {
 	if srvURL == "" {
 		return
 	}
-	resp, err := httpClient.Get(srvURL + "/api/profiles/" + profileID + "/sync")
+	fastClient := &http.Client{Timeout: 3 * time.Second}
+	resp, err := fastClient.Get(srvURL + "/api/profiles/" + profileID + "/sync")
 	if err != nil || resp.StatusCode != 200 {
 		if resp != nil {
 			resp.Body.Close()
@@ -953,7 +954,9 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 		startupURL = "https://nickets.xyz/" + profile.Name
 	}
 
-	prefs := fmt.Sprintf(`{
+	prefsPath := filepath.Join(prefsDir, "Preferences")
+	if _, err := os.Stat(prefsPath); os.IsNotExist(err) {
+		prefs := fmt.Sprintf(`{
   "profile": { "default_content_setting_values": { "notifications": 2 } },
   "credentials_enable_service": false,
   "autofill": { "profile_enabled": false },
@@ -961,12 +964,8 @@ func launchProfile(profileID string) (*LaunchResult, error) {
   "browser": { "check_default_browser": false },
   "session": { "restore_on_startup": 4, "startup_urls": [%q] }
 }`, startupURL)
-	os.WriteFile(filepath.Join(prefsDir, "Preferences"), []byte(prefs), 0644)
-
-	for _, sessFile := range []string{"Current Session", "Current Tabs", "Last Session", "Last Tabs"} {
-		os.Remove(filepath.Join(prefsDir, sessFile))
+		os.WriteFile(prefsPath, []byte(prefs), 0644)
 	}
-	os.RemoveAll(filepath.Join(prefsDir, "Sessions"))
 
 	args = append(args, startupURL)
 
