@@ -424,8 +424,13 @@
 
       <div class="form-group">
         <label>Proxy</label>
-        <input type="text" id="profileProxy" placeholder="host:port:username:password (or empty for direct)">
-        <div class="form-hint">Format: host:port:user:pass or host:port for no-auth proxy</div>
+        <select id="profileProxyMode" onchange="App.toggleProxyInput()" style="width:100%;padding:8px 12px;background:#0a0b10;border:1px solid #2a2b3d;border-radius:8px;color:#d1d5db;margin-bottom:8px;">
+          <option value="direct">Direct Connection (No Proxy)</option>
+          <option value="nickets">Nickets Proxy (Random from list)</option>
+          <option value="custom">Custom Proxy</option>
+        </select>
+        <input type="text" id="profileProxy" placeholder="host:port:username:password" style="display:none;">
+        <div class="form-hint" id="proxyHint">No proxy will be used</div>
       </div>
 
       <div class="form-row">
@@ -804,6 +809,8 @@ var App = (function() {
     document.getElementById('saveProfileBtn').textContent = 'Create Profile';
     document.getElementById('profileName').value = '';
     document.getElementById('profileProxy').value = '';
+    document.getElementById('profileProxyMode').value = 'direct';
+    toggleProxyInput();
     document.getElementById('profileGmail').value = '';
     document.getElementById('profileCustomNumber').value = '';
     document.getElementById('profileWidth').value = '1920';
@@ -825,6 +832,14 @@ var App = (function() {
     document.getElementById('saveProfileBtn').textContent = 'Save Changes';
     document.getElementById('profileName').value = p.name;
     document.getElementById('profileProxy').value = p.proxy || '';
+    if (p.proxy && p.proxy.indexOf('NICKETS:') === 0) {
+      document.getElementById('profileProxyMode').value = 'nickets';
+    } else if (p.proxy) {
+      document.getElementById('profileProxyMode').value = 'custom';
+    } else {
+      document.getElementById('profileProxyMode').value = 'direct';
+    }
+    toggleProxyInput();
     document.getElementById('profileGmail').value = p.gmail || '';
     document.getElementById('profileCustomNumber').value = p.custom_number || '';
     document.getElementById('profileWidth').value = p.window_width || 1920;
@@ -895,7 +910,7 @@ var App = (function() {
     var body = {
       name: name,
       folder_id: folderId ? parseInt(folderId) : null,
-      proxy: document.getElementById('profileProxy').value.trim(),
+      proxy: getProxyValue(),
       gmail: document.getElementById('profileGmail').value.trim(),
       custom_number: document.getElementById('profileCustomNumber').value.trim(),
       window_width: parseInt(document.getElementById('profileWidth').value) || 1920,
@@ -1438,6 +1453,7 @@ var App = (function() {
     stopProfile: stopProfile,
     showCreateModal: showCreateModal,
     showBulkModal: showBulkModal,
+    toggleProxyInput: toggleProxyInput,
     bulkCreate: bulkCreate,
     showEditModal: showEditModal,
     saveProfile: saveProfile,
@@ -1463,6 +1479,46 @@ var App = (function() {
     deleteGroupAction: deleteGroupAction,
     editGroupPerms: editGroupPerms
   };
+  var nicketsProxies = [];
+
+  function loadProxyList() {
+    fetch('/api/proxy-list').then(function(r){return r.json();}).then(function(d) {
+      nicketsProxies = d.proxies || [];
+      var hint = document.getElementById('proxyHint');
+      if (hint && nicketsProxies.length) {
+        hint.setAttribute('data-count', nicketsProxies.length);
+      }
+    }).catch(function(){});
+  }
+
+  function toggleProxyInput() {
+    var mode = document.getElementById('profileProxyMode').value;
+    var input = document.getElementById('profileProxy');
+    var hint = document.getElementById('proxyHint');
+    if (mode === 'custom') {
+      input.style.display = '';
+      hint.textContent = 'Format: host:port:user:pass';
+    } else if (mode === 'nickets') {
+      input.style.display = 'none';
+      hint.textContent = 'Random proxy from Nickets list (' + nicketsProxies.length + ' proxies loaded)';
+    } else {
+      input.style.display = 'none';
+      hint.textContent = 'No proxy will be used';
+    }
+  }
+
+  function getProxyValue() {
+    var mode = document.getElementById('profileProxyMode').value;
+    if (mode === 'nickets' && nicketsProxies.length) {
+      return nicketsProxies[Math.floor(Math.random() * nicketsProxies.length)];
+    } else if (mode === 'custom') {
+      return document.getElementById('profileProxy').value.trim();
+    }
+    return '';
+  }
+
+  loadProxyList();
+
   function showBulkModal() {
     document.getElementById('bulkIds').value = '';
     document.getElementById('bulkProxyList').value = '';
@@ -1489,6 +1545,7 @@ var App = (function() {
     if (folderId) folderId = parseInt(folderId);
     var proxyList = document.getElementById('bulkProxyList').value.trim();
     var proxies = proxyList ? proxyList.split('\n').map(function(p){return p.trim();}).filter(Boolean) : [];
+    if (proxies.length === 0 && nicketsProxies.length > 0) proxies = nicketsProxies;
     api('POST', '/api/profiles/bulk', {
       ids: ids,
       folder_id: folderId,

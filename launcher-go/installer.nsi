@@ -13,6 +13,12 @@ Section "Install"
   SetOutPath "$INSTDIR"
   File "nickets.exe"
 
+  ; Create proxies folder in user's .antidetect directory
+  CreateDirectory "$PROFILE\.antidetect\proxies"
+  SetOutPath "$PROFILE\.antidetect\proxies"
+  File "PROXY.csv"
+
+  SetOutPath "$INSTDIR"
   CreateDirectory "$SMPROGRAMS\Nickets"
   CreateShortcut "$SMPROGRAMS\Nickets\Nickets.lnk" "$INSTDIR\nickets.exe"
   CreateShortcut "$DESKTOP\Nickets.lnk" "$INSTDIR\nickets.exe"
