@@ -222,6 +222,7 @@
       <div class="toolbar-actions">
         <button class="btn btn-ghost btn-sm" onclick="App.refresh()">Refresh</button>
         <button class="btn btn-primary btn-sm" onclick="App.showCreateModal()">+ New Profile</button>
+        <button class="btn btn-ghost btn-sm" onclick="App.showBulkModal()">Bulk Create</button>
       </div>
     </div>
     <div class="content" id="content">
@@ -328,6 +329,40 @@
     <div class="modal-body" id="fpModalBody"></div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="App.closeModal('fpModal')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Bulk Create Modal -->
+<div class="modal-overlay" id="bulkModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Bulk Create Profiles</h3>
+      <button class="modal-close" onclick="App.closeModal('bulkModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Profile IDs (one per line)</label>
+        <textarea id="bulkIds" rows="10" placeholder="BY17&#10;BJ89&#10;SL95&#10;..." style="width:100%;padding:10px 12px;background:#0a0b10;border:1px solid #2a2b3d;border-radius:8px;color:#d1d5db;font-family:monospace;font-size:13px;resize:vertical;"></textarea>
+        <div style="font-size:11px;color:#71717a;margin-top:4px;">Each line = one profile. Startup URL will be nickets.xyz/{ID}</div>
+      </div>
+      <div style="display:flex;gap:12px;">
+        <div class="form-group" style="flex:1">
+          <label>Folder</label>
+          <select id="bulkFolder" style="width:100%;padding:8px 12px;background:#0a0b10;border:1px solid #2a2b3d;border-radius:8px;color:#d1d5db;"></select>
+        </div>
+        <div class="form-group" style="flex:1">
+          <label>Proxy (optional)</label>
+          <input type="text" id="bulkProxy" placeholder="ip:port:user:pass" style="font-family:monospace;">
+        </div>
+      </div>
+      <div id="bulkResult" style="display:none;padding:12px;border-radius:8px;background:rgba(46,160,67,0.1);border:1px solid rgba(46,160,67,0.3);margin-top:8px;">
+        <div id="bulkResultText" style="font-size:13px;color:#d1d5db;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="App.closeModal('bulkModal')">Cancel</button>
+      <button class="btn btn-primary" id="bulkCreateBtn" onclick="App.bulkCreate()">Create Profiles</button>
     </div>
   </div>
 </div>
@@ -934,8 +969,60 @@ var App = (function() {
     deleteFolder: deleteFolder,
     downloadChromium: downloadChromium,
     openExtensionsFolder: openExtensionsFolder,
-    closeModal: closeModal
+    closeModal: closeModal,
+    showBulkModal: showBulkModal,
+    bulkCreate: bulkCreate
   };
+
+  function showBulkModal() {
+    document.getElementById('bulkIds').value = '';
+    document.getElementById('bulkProxy').value = '';
+    document.getElementById('bulkResult').style.display = 'none';
+    document.getElementById('bulkCreateBtn').disabled = false;
+    document.getElementById('bulkCreateBtn').textContent = 'Create Profiles';
+    var sel = document.getElementById('bulkFolder');
+    sel.innerHTML = '<option value="">No folder</option>';
+    state.folders.forEach(function(f) {
+      sel.innerHTML += '<option value="' + f.id + '">' + f.name + '</option>';
+    });
+    document.getElementById('bulkModal').classList.add('show');
+  }
+
+  function bulkCreate() {
+    var ids = document.getElementById('bulkIds').value.trim();
+    if (!ids) { toast('Enter at least one profile ID', 'error'); return; }
+
+    var btn = document.getElementById('bulkCreateBtn');
+    btn.disabled = true;
+    btn.textContent = 'Creating...';
+
+    var folderId = document.getElementById('bulkFolder').value || null;
+    if (folderId) folderId = parseInt(folderId);
+
+    api('POST', '/api/profiles/bulk', {
+      ids: ids,
+      folder_id: folderId,
+      proxy: document.getElementById('bulkProxy').value.trim()
+    }).then(function(result) {
+      var resDiv = document.getElementById('bulkResult');
+      var resTxt = document.getElementById('bulkResultText');
+      resDiv.style.display = 'block';
+
+      var msg = 'Created ' + result.total_created + ' profiles';
+      if (result.total_skipped > 0) {
+        msg += ', skipped ' + result.total_skipped + ' (already exist)';
+      }
+      resTxt.textContent = msg;
+      toast(msg, 'success');
+
+      btn.textContent = 'Done!';
+      setTimeout(function() { closeModal('bulkModal'); refresh(); }, 1500);
+    }).catch(function(e) {
+      toast('Bulk create failed: ' + e.message, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Create Profiles';
+    });
+  }
 })();
 </script>
 </body>

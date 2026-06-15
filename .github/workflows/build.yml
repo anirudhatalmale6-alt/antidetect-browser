@@ -1,0 +1,43 @@
+name: Build Nickets
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build Windows exe
+        working-directory: launcher-go
+        env:
+          GOOS: windows
+          GOARCH: amd64
+          CGO_ENABLED: '0'
+        run: go build -ldflags="-s -w" -o nickets.exe main.go
+
+      - name: Build NSIS installer
+        uses: joncloud/makensis-action@v4
+        with:
+          script-file: launcher-go/installer.nsi
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.1-${{ github.run_number }}
+          name: Nickets v1.0.1 Build ${{ github.run_number }}
+          files: |
+            launcher-go/nickets.exe
+            launcher-go/NicketsSetup.exe
+          make_latest: true
