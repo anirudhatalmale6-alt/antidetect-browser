@@ -847,21 +847,28 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 
 	prefsDir := filepath.Join(profileDir, "Default")
 	os.MkdirAll(prefsDir, 0755)
-	prefs := `{
+
+	startupURL := profile.StartupURL
+	if startupURL == "" {
+		startupURL = "https://nickets.xyz/" + profile.Name
+	}
+
+	prefs := fmt.Sprintf(`{
   "profile": { "default_content_setting_values": { "notifications": 2 } },
   "credentials_enable_service": false,
   "autofill": { "profile_enabled": false },
   "translate": { "enabled": false },
-  "browser": { "check_default_browser": false }
-}`
-	prefsPath := filepath.Join(prefsDir, "Preferences")
-	if _, err := os.Stat(prefsPath); os.IsNotExist(err) {
-		os.WriteFile(prefsPath, []byte(prefs), 0644)
-	}
+  "browser": { "check_default_browser": false },
+  "session": { "restore_on_startup": 4, "startup_urls": [%q] }
+}`, startupURL)
+	os.WriteFile(filepath.Join(prefsDir, "Preferences"), []byte(prefs), 0644)
 
-	if profile.StartupURL != "" {
-		args = append(args, profile.StartupURL)
+	for _, sessFile := range []string{"Current Session", "Current Tabs", "Last Session", "Last Tabs"} {
+		os.Remove(filepath.Join(prefsDir, sessFile))
 	}
+	os.RemoveAll(filepath.Join(prefsDir, "Sessions"))
+
+	args = append(args, startupURL)
 
 	log.Printf("Launching profile %s (%s) with %d user extensions: %s %v", profile.ID, profile.Name, len(loadedExtNames), chromiumPath, args)
 
