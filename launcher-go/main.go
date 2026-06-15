@@ -1200,7 +1200,7 @@ func openBrowser(url string) {
 			cmd := exec.Command(browser,
 				"--app="+url,
 				"--user-data-dir="+appDataDir,
-				"--window-size=1300,800",
+				"--window-size=1440,900",
 				"--disable-extensions",
 				"--new-window",
 			)
