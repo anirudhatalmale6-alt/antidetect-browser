@@ -967,7 +967,7 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 		os.WriteFile(prefsPath, []byte(prefs), 0644)
 	}
 
-	args = append(args, startupURL)
+	// startup URL is set in Preferences, no need to pass as arg (avoids duplicate tab)
 
 	log.Printf("Launching profile %s (%s) with %d user extensions: %s %v", profile.ID, profile.Name, len(loadedExtNames), chromiumPath, args)
 
