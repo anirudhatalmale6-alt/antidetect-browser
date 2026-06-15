@@ -1171,6 +1171,11 @@ func findAppBrowser() string {
 	if runtime.GOOS != "windows" {
 		return ""
 	}
+	if chromiumPath != "" {
+		if _, err := os.Stat(chromiumPath); err == nil {
+			return chromiumPath
+		}
+	}
 	candidates := []string{
 		filepath.Join(os.Getenv("PROGRAMFILES"), "Google", "Chrome", "Application", "chrome.exe"),
 		filepath.Join(os.Getenv("PROGRAMFILES(X86)"), "Google", "Chrome", "Application", "chrome.exe"),
