@@ -2,11 +2,13 @@ package main
 
 import (
 	"archive/zip"
+	"bytes"
 	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
 	"log"
+	"mime/multipart"
 	"net"
 	"net/http"
 	"os"
@@ -734,6 +736,127 @@ type LaunchResult struct {
 	ExtensionsLoaded []string `json:"extensions_loaded"`
 }
 
+func downloadProfileSync(profileID, profileDir string) {
+	srvURL := serverURL
+	if srvURL == "" {
+		return
+	}
+	resp, err := httpClient.Get(srvURL + "/api/profiles/" + profileID + "/sync")
+	if err != nil || resp.StatusCode != 200 {
+		if resp != nil {
+			resp.Body.Close()
+		}
+		return
+	}
+	defer resp.Body.Close()
+
+	tmpFile := filepath.Join(profileDir, "_sync_download.zip")
+	f, err := os.Create(tmpFile)
+	if err != nil {
+		return
+	}
+	io.Copy(f, resp.Body)
+	f.Close()
+
+	extractZip(tmpFile, filepath.Join(profileDir, "Default"))
+	os.Remove(tmpFile)
+	log.Printf("Downloaded sync data for profile %s", profileID)
+}
+
+func uploadProfileSync(profileID, profileDir string) {
+	srvURL := serverURL
+	if srvURL == "" {
+		return
+	}
+	defaultDir := filepath.Join(profileDir, "Default")
+	if _, err := os.Stat(defaultDir); os.IsNotExist(err) {
+		return
+	}
+
+	syncFiles := []string{
+		"Cookies", "Cookies-journal",
+		"Login Data", "Login Data-journal",
+		"Web Data", "Web Data-journal",
+		"Preferences", "Secure Preferences",
+	}
+	syncDirs := []string{"Local Storage", "Session Storage", "IndexedDB"}
+
+	tmpFile := filepath.Join(profileDir, "_sync_upload.zip")
+	zf, err := os.Create(tmpFile)
+	if err != nil {
+		return
+	}
+	zw := zip.NewWriter(zf)
+
+	for _, name := range syncFiles {
+		fp := filepath.Join(defaultDir, name)
+		if data, err := os.ReadFile(fp); err == nil {
+			w, _ := zw.Create(name)
+			w.Write(data)
+		}
+	}
+	for _, dir := range syncDirs {
+		dirPath := filepath.Join(defaultDir, dir)
+		filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+			if err != nil || info.IsDir() {
+				return nil
+			}
+			rel, _ := filepath.Rel(defaultDir, path)
+			w, _ := zw.Create(filepath.ToSlash(rel))
+			data, _ := os.ReadFile(path)
+			w.Write(data)
+			return nil
+		})
+	}
+	zw.Close()
+	zf.Close()
+
+	f, _ := os.Open(tmpFile)
+	defer f.Close()
+	defer os.Remove(tmpFile)
+
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+	part, _ := writer.CreateFormFile("file", profileID+".zip")
+	io.Copy(part, f)
+	writer.Close()
+
+	req, _ := http.NewRequest("POST", srvURL+"/api/profiles/"+profileID+"/sync", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	resp, err := httpClient.Do(req)
+	if err == nil {
+		resp.Body.Close()
+		log.Printf("Uploaded sync data for profile %s", profileID)
+	}
+}
+
+func extractZip(zipPath, destDir string) {
+	r, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return
+	}
+	defer r.Close()
+	for _, f := range r.File {
+		fpath := filepath.Join(destDir, f.Name)
+		os.MkdirAll(filepath.Dir(fpath), 0755)
+		if f.FileInfo().IsDir() {
+			continue
+		}
+		rc, err := f.Open()
+		if err != nil {
+			continue
+		}
+		outFile, err := os.Create(fpath)
+		if err != nil {
+			rc.Close()
+			continue
+		}
+		io.Copy(outFile, rc)
+		outFile.Close()
+		rc.Close()
+	}
+}
+
 func launchProfile(profileID string) (*LaunchResult, error) {
 	mu.Lock()
 	if _, ok := processes[profileID]; ok {
@@ -784,6 +907,8 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 
 	profileDir := filepath.Join(dataDir, "profiles", profile.ID)
 	os.MkdirAll(profileDir, 0755)
+
+	downloadProfileSync(profile.ID, profileDir)
 
 	fpDir, err := ensureFPExtension()
 	if err != nil {
@@ -888,12 +1013,17 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 	processes[profile.ID] = cmd.Process
 	mu.Unlock()
 
+	pID := profile.ID
+	pName := profile.Name
+	pDir := profileDir
 	go func() {
 		cmd.Wait()
 		mu.Lock()
-		delete(processes, profile.ID)
+		delete(processes, pID)
 		mu.Unlock()
-		log.Printf("Profile %s (%s) exited", profile.ID, profile.Name)
+		log.Printf("Profile %s (%s) closed, syncing data...", pID, pName)
+		uploadProfileSync(pID, pDir)
+		log.Printf("Profile %s (%s) sync complete", pID, pName)
 	}()
 
 	return &LaunchResult{ExtensionsLoaded: loadedExtNames}, nil
