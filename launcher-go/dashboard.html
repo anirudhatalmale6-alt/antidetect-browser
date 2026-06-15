@@ -541,7 +541,8 @@ var App = (function() {
     running: {},
     activeFolder: null,
     search: '',
-    searchField: 'all'
+    searchField: 'all',
+    currentPanel: 'profiles'
   };
 
   function esc(s) {
@@ -640,6 +641,7 @@ var App = (function() {
   }
 
   function selectFolder(folderId) {
+    state.currentPanel = 'profiles';
     state.activeFolder = folderId;
     renderSidebar();
     renderProfiles();
@@ -1156,7 +1158,7 @@ var App = (function() {
           state.running[s.running[i].profile_id] = s.running[i].pid;
         }
       }
-      if (state.profiles.length) renderProfiles();
+      if (state.profiles.length && state.currentPanel === 'profiles') renderProfiles();
     }).catch(function() {});
   }
 
@@ -1232,6 +1234,7 @@ var App = (function() {
 
   // ─── RPA Editor ─────────────────────────────────────────────────────
   function showRPAPanel() {
+    state.currentPanel = 'rpa';
     var el = document.getElementById('content');
     document.getElementById('toolbarTitle').textContent = 'RPA Editor';
     el.style.overflow = 'hidden';
@@ -1265,6 +1268,7 @@ var App = (function() {
   };
 
   function showTeamPanel() {
+    state.currentPanel = 'team';
     var el = document.getElementById('content');
     document.getElementById('toolbarTitle').textContent = 'Team Members';
     el.innerHTML = '<div style="padding:20px;max-width:800px;margin:0 auto;">' +
@@ -1343,6 +1347,7 @@ var App = (function() {
   }
 
   function showPermPanel() {
+    state.currentPanel = 'permissions';
     var el = document.getElementById('content');
     document.getElementById('toolbarTitle').textContent = 'Groups & Permissions';
     el.innerHTML = '<div style="padding:20px;max-width:800px;margin:0 auto;">' +

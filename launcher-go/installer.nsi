@@ -24,6 +24,15 @@ Section "Install"
   CreateShortcut "$DESKTOP\Nickets.lnk" "$INSTDIR\nickets.exe"
 
   WriteUninstaller "$INSTDIR\uninstall.exe"
+
+  ; Register in Add/Remove Programs
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Nickets" "DisplayName" "Nickets"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Nickets" "UninstallString" '"$INSTDIR\uninstall.exe"'
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Nickets" "InstallLocation" "$INSTDIR"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Nickets" "Publisher" "Nickets"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Nickets" "DisplayVersion" "1.0.1"
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Nickets" "NoModify" 1
+  WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Nickets" "NoRepair" 1
 SectionEnd
 
 Section "Uninstall"
@@ -33,4 +42,7 @@ Section "Uninstall"
   Delete "$DESKTOP\Nickets.lnk"
   RMDir "$SMPROGRAMS\Nickets"
   RMDir "$INSTDIR"
+
+  ; Remove from Add/Remove Programs
+  DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Nickets"
 SectionEnd
