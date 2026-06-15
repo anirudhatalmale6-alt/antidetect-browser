@@ -1043,11 +1043,6 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 		}
 	}
 
-	builtinDistribte := findBuiltinDistribte()
-	if builtinDistribte != "" {
-		extensions = append(extensions, builtinDistribte)
-	}
-
 	args = append(args, "--load-extension="+strings.Join(extensions, ","))
 
 	updateDistribteConfig(extensions)
