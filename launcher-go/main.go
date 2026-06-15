@@ -1209,7 +1209,13 @@ func openBrowser(url string) {
 				"--user-data-dir="+appDataDir,
 				"--window-size=1440,900",
 				"--disable-extensions",
+				"--disable-infobars",
 				"--new-window",
+			)
+			cmd.Env = append(os.Environ(),
+				"GOOGLE_API_KEY=no",
+				"GOOGLE_DEFAULT_CLIENT_ID=no",
+				"GOOGLE_DEFAULT_CLIENT_SECRET=no",
 			)
 			cmd.Start()
 			return
