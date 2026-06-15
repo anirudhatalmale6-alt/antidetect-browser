@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -41,7 +41,8 @@ jobs:
         run: npx electron-builder --win --x64 --publish never
 
       - name: List build output
-        run: ls -la electron/dist/ || true
+        run: dir electron\dist\
+        shell: cmd
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
