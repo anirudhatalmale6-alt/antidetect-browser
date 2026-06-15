@@ -1568,7 +1568,8 @@ var App = (function() {
       proxy: singleProxy,
       random_fingerprint: document.getElementById('bulkRandomFp').checked,
       random_proxy: bulkMode === 'nickets',
-      proxy_list: proxies
+      proxy_list: proxies,
+      platform: document.getElementById('bulkOS').value
     }).then(function(result) {
       document.getElementById('bulkResult').style.display = 'block';
       var msg = 'Created ' + result.total_created + ' profiles';
@@ -3191,6 +3192,15 @@ function initRPAEditor() {
         <div class="form-group" style="flex:1">
           <label>Folder</label>
           <select id="bulkFolder" style="width:100%;padding:8px 12px;background:#0a0b10;border:1px solid #2a2b3d;border-radius:8px;color:#d1d5db;"></select>
+        </div>
+        <div class="form-group" style="flex:1">
+          <label>Operating System</label>
+          <select id="bulkOS" style="width:100%;padding:8px 12px;background:#0a0b10;border:1px solid #2a2b3d;border-radius:8px;color:#d1d5db;">
+            <option value="Windows">Windows</option>
+            <option value="macOS">macOS</option>
+            <option value="Linux">Linux</option>
+            <option value="Random">Random</option>
+          </select>
         </div>
       </div>
       <div style="display:flex;gap:20px;margin-top:8px;">
