@@ -608,27 +608,27 @@ func ensureProxyAuthExtension(profileID, proxyStr string) (string, error) {
 	os.MkdirAll(extDir, 0755)
 
 	manifest := `{
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "Proxy Auth Helper",
   "version": "1.0",
-  "permissions": ["webRequest", "webRequestBlocking", "<all_urls>"],
+  "permissions": ["webRequest", "webRequestAuthProvider"],
+  "host_permissions": ["<all_urls>"],
   "background": {
-    "scripts": ["background.js"],
-    "persistent": true
+    "service_worker": "background.js"
   }
 }`
 
 	bg := fmt.Sprintf(`chrome.webRequest.onAuthRequired.addListener(
-  function(details) {
-    return {
+  function(details, asyncCallback) {
+    asyncCallback({
       authCredentials: {
         username: %q,
         password: %q
       }
-    };
+    });
   },
   { urls: ["<all_urls>"] },
-  ["blocking"]
+  ["asyncBlocking"]
 );`, user, pass)
 
 	if err := os.WriteFile(filepath.Join(extDir, "manifest.json"), []byte(manifest), 0644); err != nil {
@@ -1488,6 +1488,15 @@ func main() {
 	mux.HandleFunc("/api/download-chromium", withCORS(handleDownloadChromium))
 	mux.HandleFunc("/api/extensions", withCORS(handleExtensions))
 	mux.HandleFunc("/api/open-extensions", withCORS(handleOpenExtensionsFolder))
+	mux.HandleFunc("/api/quit", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.WriteHeader(200)
+		go func() {
+			time.Sleep(500 * time.Millisecond)
+			log.Println("App window closed, shutting down...")
+			os.Exit(0)
+		}()
+	})
 	mux.HandleFunc("/", handleIndex)
 
 	// Catch-all proxy for /api/* (anything not matched above)
