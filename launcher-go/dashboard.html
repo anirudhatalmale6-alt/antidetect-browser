@@ -1526,17 +1526,25 @@ var App = (function() {
 
   function showBulkModal() {
     document.getElementById('bulkIds').value = '';
-    document.getElementById('bulkProxyList').value = '';
     document.getElementById('bulkResult').style.display = 'none';
     document.getElementById('bulkCreateBtn').disabled = false;
     document.getElementById('bulkCreateBtn').textContent = 'Create Profiles';
     document.getElementById('bulkRandomFp').checked = true;
-    document.getElementById('bulkRandomProxy').checked = true;
+    document.getElementById('bulkProxyMode').value = 'nickets';
+    document.getElementById('bulkCustomProxy').style.display = 'none';
+    document.getElementById('bulkProxyHint').textContent = 'Each profile gets a random proxy from Nickets list (' + nicketsProxies.length + ' proxies)';
     var sel = document.getElementById('bulkFolder');
     sel.innerHTML = '<option value="">No folder</option>';
     state.folders.forEach(function(f) {
       sel.innerHTML += '<option value="' + f.id + '">' + f.name + '</option>';
     });
+    document.getElementById('bulkProxyMode').onchange = function() {
+      var m = this.value;
+      document.getElementById('bulkCustomProxy').style.display = m === 'custom' ? '' : 'none';
+      if (m === 'direct') document.getElementById('bulkProxyHint').textContent = 'No proxy will be used';
+      else if (m === 'nickets') document.getElementById('bulkProxyHint').textContent = 'Each profile gets a random proxy from Nickets list (' + nicketsProxies.length + ' proxies)';
+      else document.getElementById('bulkProxyHint').textContent = 'Same proxy for all profiles';
+    };
     openModal('bulkModal');
   }
 
@@ -1548,15 +1556,20 @@ var App = (function() {
     btn.textContent = 'Creating...';
     var folderId = document.getElementById('bulkFolder').value || null;
     if (folderId) folderId = parseInt(folderId);
-    var proxyList = document.getElementById('bulkProxyList').value.trim();
-    var proxies = proxyList ? proxyList.split('\n').map(function(p){return p.trim();}).filter(Boolean) : [];
-    if (proxies.length === 0 && nicketsProxies.length > 0) proxies = nicketsProxies;
+    var bulkMode = document.getElementById('bulkProxyMode').value;
+    var proxies = [];
+    var singleProxy = '';
+    if (bulkMode === 'nickets') {
+      proxies = nicketsProxies;
+    } else if (bulkMode === 'custom') {
+      singleProxy = document.getElementById('bulkCustomProxy').value.trim();
+    }
     api('POST', '/api/profiles/bulk', {
       ids: ids,
       folder_id: folderId,
-      proxy: '',
+      proxy: singleProxy,
       random_fingerprint: document.getElementById('bulkRandomFp').checked,
-      random_proxy: document.getElementById('bulkRandomProxy').checked,
+      random_proxy: bulkMode === 'nickets',
       proxy_list: proxies
     }).then(function(result) {
       document.getElementById('bulkResult').style.display = 'block';
@@ -3166,20 +3179,25 @@ function initRPAEditor() {
         <div style="font-size:11px;color:#71717a;margin-top:4px;">Each line = one profile. Startup URL will be nickets.xyz/{ID}</div>
       </div>
       <div class="form-group">
-        <label>Proxy List (one per line)</label>
-        <textarea id="bulkProxyList" rows="5" placeholder="ip:port:user:pass&#10;ip:port:user:pass&#10;..." style="width:100%;padding:10px 12px;background:#0a0b10;border:1px solid #2a2b3d;border-radius:8px;color:#d1d5db;font-family:monospace;font-size:13px;resize:vertical;"></textarea>
-        <div style="font-size:11px;color:#71717a;margin-top:4px;">Random proxy assigned to each profile from this list</div>
+        <label>Proxy</label>
+        <select id="bulkProxyMode" style="width:100%;padding:8px 12px;background:#0a0b10;border:1px solid #2a2b3d;border-radius:8px;color:#d1d5db;margin-bottom:6px;">
+          <option value="direct">Direct Connection (No Proxy)</option>
+          <option value="nickets" selected>Nickets Proxy (Random from list)</option>
+          <option value="custom">Custom Proxy</option>
+        </select>
+        <input type="text" id="bulkCustomProxy" placeholder="host:port:user:pass" style="display:none;width:100%;padding:8px 12px;background:#0a0b10;border:1px solid #2a2b3d;border-radius:8px;color:#d1d5db;font-family:monospace;">
+        <div id="bulkProxyHint" style="font-size:11px;color:#71717a;margin-top:4px;">Each profile gets a random proxy from Nickets list</div>
+        <textarea id="bulkProxyList" style="display:none;"></textarea>
       </div>
-      <div class="form-group">
-        <label>Folder</label>
-        <select id="bulkFolder" style="width:100%;padding:8px 12px;background:#0a0b10;border:1px solid #2a2b3d;border-radius:8px;color:#d1d5db;"></select>
+      <div style="display:flex;gap:12px;">
+        <div class="form-group" style="flex:1">
+          <label>Folder</label>
+          <select id="bulkFolder" style="width:100%;padding:8px 12px;background:#0a0b10;border:1px solid #2a2b3d;border-radius:8px;color:#d1d5db;"></select>
+        </div>
       </div>
       <div style="display:flex;gap:20px;margin-top:8px;">
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#d1d5db;cursor:pointer;">
           <input type="checkbox" id="bulkRandomFp" checked style="accent-color:#7c3aed;"> Random Fingerprint
-        </label>
-        <label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#d1d5db;cursor:pointer;">
-          <input type="checkbox" id="bulkRandomProxy" checked style="accent-color:#7c3aed;"> Random Proxy
         </label>
       </div>
       <div id="bulkResult" style="display:none;padding:12px;border-radius:8px;background:rgba(46,160,67,0.1);border:1px solid rgba(46,160,67,0.3);margin-top:12px;">
