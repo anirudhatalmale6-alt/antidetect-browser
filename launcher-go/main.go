@@ -758,7 +758,7 @@ func downloadProfileSync(profileID, profileDir string) {
 	io.Copy(f, resp.Body)
 	f.Close()
 
-	extractZip(tmpFile, filepath.Join(profileDir, "Default"))
+	_ = extractZip(tmpFile, filepath.Join(profileDir, "Default"))
 	os.Remove(tmpFile)
 	log.Printf("Downloaded sync data for profile %s", profileID)
 }
@@ -830,32 +830,7 @@ func uploadProfileSync(profileID, profileDir string) {
 	}
 }
 
-func extractZip(zipPath, destDir string) {
-	r, err := zip.OpenReader(zipPath)
-	if err != nil {
-		return
-	}
-	defer r.Close()
-	for _, f := range r.File {
-		fpath := filepath.Join(destDir, f.Name)
-		os.MkdirAll(filepath.Dir(fpath), 0755)
-		if f.FileInfo().IsDir() {
-			continue
-		}
-		rc, err := f.Open()
-		if err != nil {
-			continue
-		}
-		outFile, err := os.Create(fpath)
-		if err != nil {
-			rc.Close()
-			continue
-		}
-		io.Copy(outFile, rc)
-		outFile.Close()
-		rc.Close()
-	}
-}
+// extractZip already defined above
 
 func launchProfile(profileID string) (*LaunchResult, error) {
 	mu.Lock()
