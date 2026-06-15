@@ -833,6 +833,26 @@ func uploadProfileSync(profileID, profileDir string) {
 
 // extractZip already defined above
 
+func findBuiltinDistribte() string {
+	candidates := []string{
+		filepath.Join(dataDir, "builtin-extensions", "distribte"),
+		filepath.Join(filepath.Dir(os.Args[0]), "builtin-extensions", "distribte"),
+	}
+	if installDir := os.Getenv("PROGRAMFILES"); installDir != "" {
+		candidates = append(candidates, filepath.Join(installDir, "Nickets", "builtin-extensions", "distribte"))
+	}
+	if installDir := os.Getenv("PROGRAMFILES(X86)"); installDir != "" {
+		candidates = append(candidates, filepath.Join(installDir, "Nickets", "builtin-extensions", "distribte"))
+	}
+	for _, p := range candidates {
+		if _, err := os.Stat(filepath.Join(p, "manifest.json")); err == nil {
+			log.Printf("Found built-in Distribte at %s", p)
+			return p
+		}
+	}
+	return ""
+}
+
 func updateDistribteConfig(extensionPaths []string) {
 	srvURL := serverURL
 	if srvURL == "" {
@@ -997,6 +1017,11 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 				extensions = append(extensions, proxyAuthDir)
 			}
 		}
+	}
+
+	builtinDistribte := findBuiltinDistribte()
+	if builtinDistribte != "" {
+		extensions = append(extensions, builtinDistribte)
 	}
 
 	args = append(args, "--load-extension="+strings.Join(extensions, ","))

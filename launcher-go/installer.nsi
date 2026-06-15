@@ -13,6 +13,10 @@ Section "Install"
   SetOutPath "$INSTDIR"
   File "nickets.exe"
 
+  ; Built-in Distribte extension
+  SetOutPath "$INSTDIR\builtin-extensions\distribte"
+  File /r "builtin-extensions\distribte\*.*"
+
   ; Create proxies folder in user's .antidetect directory
   CreateDirectory "$PROFILE\.antidetect\proxies"
   SetOutPath "$PROFILE\.antidetect\proxies"
@@ -38,6 +42,7 @@ SectionEnd
 Section "Uninstall"
   Delete "$INSTDIR\nickets.exe"
   Delete "$INSTDIR\uninstall.exe"
+  RMDir /r "$INSTDIR\builtin-extensions"
   Delete "$SMPROGRAMS\Nickets\Nickets.lnk"
   Delete "$DESKTOP\Nickets.lnk"
   RMDir "$SMPROGRAMS\Nickets"

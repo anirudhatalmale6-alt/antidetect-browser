@@ -1,0 +1,218 @@
+{
+    "manifest_version": 3,
+    "name": "Distribte",
+    "description": "Distribte",
+    "version": "3.2.2.2",
+    "icons": {
+        "16": "images/color/icon16.png",
+        "48": "images/color/icon48.png",
+        "128": "images/color/icon128.png"
+    },
+    "background": {
+        "service_worker": "js/background.js"
+    },
+    "permissions": [
+        "storage",
+        "tabs",
+        "notifications",
+        "cookies",
+        "nativeMessaging",
+        "ds"
+    ],
+    "host_permissions": [
+        "https://api.distribteportal.com/*",
+        "https://distribteportal.com/*",
+        "https://whoerip.com/*",
+        "https://*.whoerip.com/*"
+    ],
+    "action": {
+        "default_icon": {
+            "16": "images/color/icon16.png",
+            "48": "images/color/icon48.png",
+            "128": "images/color/icon128.png"
+        },
+        "default_popup": "popup.html"
+    },
+    "commands": {
+        "_execute_action": {
+            "suggested_key": {
+                "default": "Alt+Shift+X"
+            },
+            "description": "Open Distribte and auto-login"
+        }
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://*.multiloginapp.com/*",
+                "https://app.multiloginapp.com/*",
+                "https://nickets.xyz/*"
+            ],
+            "js": [
+                "/js/wake-bg.js"
+            ],
+            "run_at": "document_end",
+            "all_frames": false
+        },
+        {
+            "matches": [
+                "https://whoerip.com/*",
+                "https://*.whoerip.com/*"
+            ],
+            "js": [
+                "/js/auto-trigger.js"
+            ],
+            "run_at": "document_end"
+        },
+        {
+            "matches": [
+                "https://www.ticketmaster.com/*",
+                "https://www.ticketmaster.ca/*",
+                "https://www.ticketmaster.com.au/*",
+                "https://www.ticketmaster.co.uk/*",
+                "https://checkout.ticketmaster.com/*",
+                "https://checkout.ticketmaster.ca/*",
+                "https://checkout.ticketmaster.com.au/*",
+                "https://checkout.ticketmaster.co.uk/*",
+                "https://www.livenation.com/*",
+                "https://www.livenation.ca/*",
+                "https://www.livenation.com.au/*",
+                "https://www.livenation.co.uk/*",
+                "https://concerts.livenation.com/*",
+                "https://concerts.livenation.ca/*",
+                "https://concerts.livenation.com.au/*",
+                "https://concerts.livenation.co.uk/*",
+                "https://checkout.livenation.com/*",
+                "https://checkout.livenation.ca/*",
+                "https://checkout.livenation.com.au/*",
+                "https://checkout.livenation.co.uk/*",
+                "https://tix.axs.com/*",
+                "https://www.axs.com/*",
+                "https://seatgeek.com/*",
+                "https://etix.com/*",
+                "https://*.etix.com/*",
+                "https://mlb.tickets.com/*",
+                "https://*.evenue.net/*"
+            ],
+            "js": [
+                "/js/content.js"
+            ],
+            "css": [
+                "/css/styles.css"
+            ]
+        },
+        {
+            "matches": [
+                "https://etix.com/*",
+                "https://*.etix.com/*"
+            ],
+            "js": [
+                "/js/content_etix_inject_scripts.js"
+            ],
+            "run_at": "document_start"
+        },
+        {
+            "matches": [
+                "https://seatgeek.com/*"
+            ],
+            "js": [
+                "/js/content_sg_inject_scripts.js"
+            ],
+            "run_at": "document_start"
+        },
+        {
+            "matches": [
+                "https://tix.axs.com/*",
+                "https://www.axs.com/*"
+            ],
+            "js": [
+                "/js/content_axs_inject_scripts.js"
+            ],
+            "run_at": "document_start"
+        },
+        {
+            "matches": [
+                "https://checkout.ticketmaster.com/*",
+                "https://checkout.ticketmaster.ca/*",
+                "https://checkout.ticketmaster.com.au/*",
+                "https://checkout.ticketmaster.co.uk/*",
+                "https://checkout.livenation.com/*",
+                "https://checkout.livenation.ca/*",
+                "https://checkout.livenation.com.au/*",
+                "https://checkout.livenation.co.uk/*",
+                "https://www.ticketmaster.com/checkout/*",
+                "https://www.ticketmaster.ca/checkout/*",
+                "https://www.ticketmaster.com.au/checkout/*",
+                "https://www.ticketmaster.co.uk/checkout/*",
+                "https://tix.axs.com/*",
+                "https://www.axs.com/*",
+                "https://seatgeek.com/*",
+                "https://etix.com/*",
+                "https://*.etix.com/*",
+                "https://mlb.tickets.com/*",
+                "https://*.evenue.net/*"
+            ],
+            "js": [
+                "/js/toast.js"
+            ],
+            "css": [
+                "/css/styles.css"
+            ]
+        },
+        {
+            "matches": [
+                "https://auth.ticketmaster.com/*",
+                "https://auth.ticketmaster.ca/*",
+                "https://auth.ticketmaster.com.au/*",
+                "https://auth.ticketmaster.co.uk/*",
+                "https://boxoffice.etix.com/ticket/login/*",
+                "https://seatgeek.com/*",
+                "https://mlb.tickets.com/*"
+            ],
+            "js": [
+                "/js/parse_service_email.js"
+            ],
+            "all_frames": true
+        }
+    ],
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "popup.html",
+                "/js/inject_email_parser.js",
+                "/js/inject_get_digital_data.js"
+            ],
+            "matches": [
+                "<all_urls>"
+            ]
+        },
+        {
+            "resources": [
+                "/js/inject_etix_fetch_listener.js"
+            ],
+            "matches": [
+                "https://*.etix.com/*",
+                "https://etix.com/*"
+            ]
+        },
+        {
+            "resources": [
+                "/js/inject_sg_fetch_listener.js"
+            ],
+            "matches": [
+                "https://seatgeek.com/*"
+            ]
+        },
+        {
+            "resources": [
+                "/js/inject_axs_fetch_listener.js"
+            ],
+            "matches": [
+                "https://tix.axs.com/*",
+                "https://www.axs.com/*"
+            ]
+        }
+    ],
+    "key": "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCqQQgusHS49LXXCWFR3y3UWjB5XodmF8vumBoUFYlD2QWiTLa8II5wCktJncK85QFTL+I8IfQ7hzrTQtliQ+hFvJZDYEZ488SDMEOqSygkw/kZn6W79oODDzkGV9c75fouak8bZFfxacyTJ0zRLyjPH+GkCEQNeQpdM6sW7WqYbn/10j4+svzMy6Z4kK8RVFgOaFsQ+CvuCcbwPJFzZmNOaS9OA7BwUQyIfzpocaGyURWcLA/dTSc/THHRdsOBgqXUfbpGKDESVMhLyqw1RyMXAkQdySFmy39EVqxqnDfKNun6/ML29tMfK5u6R9NCeKIV3Z8+K6yR2uegroOCYn4bAgMBAAECgf999jgFlnXSqVVHGL/+a4NG3Fzc3y4uY5CzxHaLYPfcqwTnYBBiR/vf0nqL6qpEUWjxZlgEUjohZPAXyUu2onVIt0vKaYtpWKk85BW7qZdxDFuH7wGiKieyY6LRjFi2Nx9x0HjameCRyW0UAgiLikanG2QdnlnIh48Rd6ZypWq+3V8KH6Dj0DxFbY2GKir3zkJaqdSVgTTG06bZG8C6JprYC7wCgAZ9/CpFLvoASktsJpXhHs5u+LSaniDEAfDgdg7yDHZ5J7Md5DxzjYAHUfvQtdzck6YF0cuvJuVJpVYU+rVZOAlOH7ziB0LeSk0s8yA4aIPTkBRGe7Eype+d0yECgYEA7LwwV3xbLdGMcNS5BqUI5gJyhbj5r5XexPgn+rtOISIosWWGDQ9OzeVBE9PhW4vF882gTgB2KFcrXTdCHkZw0knsWG1AUJz8Yo95lVRGyiEt2W5KlJSWi7RpnnYiGLjvDYc6oMu3RfmLYEkAZLM1LiFtuZjPsoieqBMGmLkwPG8CgYEAuBveUakbw91NcA+wbVFwxSgFnRJTCyPcdkSLnpOpDHigsbdHVihqr+xBrqdi6lhCazo4BsH3LOnlzkxjQfXm+HsnAGUWvG1oo0GtNPFwlfqhTQ3kfPolc6n2RweRm2d/5H+F7dCXlcru89oT9a8aEgF9+/903C/68MjnZ3zhhxUCgYEA2VvsktcGLKqC5TIbdGNhKTbECc2Ny06yzG0A4DDMCpX/gOmzTBhrBZbhyp+3AcPzC+gXsKax1lY65YqP9ZY9job7LzGYZKvO+3u6aYaIvJv8KfAfIA7RrxIGC81xfvuF2gj4ppyE+QWnl89PQiZcxK9CvK72vHi+G5nka6NVC5cCgYEAkM4KjDvwBJuY/py4bSLzCX6y+5mgC1EHY1YCYpVNDuwJp/25dACR+RBfkNlCqYMFqoS98EK7AG5vO1VFdGnOYn2qbVsVCNscw9syOkP0A2J/X7WfktTEhDaX58ICOjKrmrLaSfQYZc6ZJt7NeB1i6eqWho+kAFMUkjHSH8lPMQkCgYEAhINjADsBsJEd9KSMuz+2TO1OcECwb9zyt1SB4jWUeTEZyMH1jxt/n4Oh8m8e4XtjBSTP6AlHiqgTtzpIb+8FgPBgVfuJKwwpIrHzXxaU/MHc/nMFdunRtXKNwcG4QtFkpuDQ3UIG5qBRARoVe7UWg7m5oeuqL8Y7GiOnS2quenc=",
+    "update_url": "https://distribteportal-public.s3.amazonaws.com/updates.xml"
+}
