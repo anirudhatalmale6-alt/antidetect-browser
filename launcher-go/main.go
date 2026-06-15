@@ -40,6 +40,7 @@ type Profile struct {
 	WindowHeight int             `json:"window_height"`
 	UserAgent    string          `json:"user_agent"`
 	Notes        string          `json:"notes"`
+	StartupURL   string          `json:"startup_url"`
 	Fingerprint  json.RawMessage `json:"fingerprint"`
 	CreatedAt    string          `json:"created_at"`
 	UpdatedAt    string          `json:"updated_at"`
@@ -856,6 +857,10 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 	prefsPath := filepath.Join(prefsDir, "Preferences")
 	if _, err := os.Stat(prefsPath); os.IsNotExist(err) {
 		os.WriteFile(prefsPath, []byte(prefs), 0644)
+	}
+
+	if profile.StartupURL != "" {
+		args = append(args, profile.StartupURL)
 	}
 
 	log.Printf("Launching profile %s (%s) with %d user extensions: %s %v", profile.ID, profile.Name, len(loadedExtNames), chromiumPath, args)
