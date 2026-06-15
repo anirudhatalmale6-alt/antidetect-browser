@@ -833,6 +833,51 @@ func uploadProfileSync(profileID, profileDir string) {
 
 // extractZip already defined above
 
+func updateDistribteConfig(extensionPaths []string) {
+	srvURL := serverURL
+	if srvURL == "" {
+		return
+	}
+	fastClient := &http.Client{Timeout: 3 * time.Second}
+	resp, err := fastClient.Get(srvURL + "/api/distribte/config")
+	if err != nil || resp.StatusCode != 200 {
+		if resp != nil {
+			resp.Body.Close()
+		}
+		return
+	}
+	defer resp.Body.Close()
+
+	var cfg struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		Enabled  bool   `json:"enabled"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&cfg); err != nil || cfg.Email == "" {
+		return
+	}
+
+	jsContent := fmt.Sprintf(`const AUTOLOGIN_CONFIG = {
+  email: %q,
+  password: %q,
+  enabled: %v
+};
+`, cfg.Email, cfg.Password, cfg.Enabled)
+
+	for _, extPath := range extensionPaths {
+		configPath := filepath.Join(extPath, "js", "autologin-config.js")
+		if _, err := os.Stat(filepath.Join(extPath, "js")); err == nil {
+			manifestPath := filepath.Join(extPath, "manifest.json")
+			if data, err := os.ReadFile(manifestPath); err == nil {
+				if strings.Contains(strings.ToLower(string(data)), "distribte") {
+					os.WriteFile(configPath, []byte(jsContent), 0644)
+					log.Printf("Updated Distribte config in %s", extPath)
+				}
+			}
+		}
+	}
+}
+
 func launchProfile(profileID string) (*LaunchResult, error) {
 	mu.Lock()
 	if _, ok := processes[profileID]; ok {
@@ -945,6 +990,8 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 	}
 
 	args = append(args, "--load-extension="+strings.Join(extensions, ","))
+
+	updateDistribteConfig(extensions)
 
 	prefsDir := filepath.Join(profileDir, "Default")
 	os.MkdirAll(prefsDir, 0755)

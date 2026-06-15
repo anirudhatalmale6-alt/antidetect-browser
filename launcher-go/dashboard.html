@@ -345,6 +345,9 @@
       <div class="nav-item" onclick="App.showPermPanel()">
         <span class="nav-item-icon">&#128274;</span> Permissions
       </div>
+      <div class="nav-item" onclick="App.showDistribteSettings()">
+        <span class="nav-item-icon">&#9881;</span> Distribte
+      </div>
     </nav>
 
     <div class="sidebar-footer">
@@ -1227,6 +1230,54 @@ var App = (function() {
     reader.readAsText(file);
   }
 
+  // ─── Distribte Settings ──────────────────────────────────────────────
+  function showDistribteSettings() {
+    state.currentPanel = 'distribte';
+    var el = document.getElementById('content');
+    document.getElementById('toolbarTitle').textContent = 'Distribte Settings';
+    el.innerHTML = '<div style="padding:20px;max-width:500px;margin:0 auto;">' +
+      '<div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:24px;">' +
+      '<h3 style="color:#eaedf3;font-size:16px;margin-bottom:16px;">Distribte Auto-Login</h3>' +
+      '<p style="color:#71717a;font-size:13px;margin-bottom:20px;">Enter your Distribte credentials. When you open a profile, it will auto-login to Distribte for you.</p>' +
+      '<div class="form-group" style="margin-bottom:14px;">' +
+      '<label style="display:block;font-size:12px;color:#8b8fa8;margin-bottom:4px;">Email</label>' +
+      '<input type="email" id="distribteEmail" placeholder="your@email.com" style="width:100%;padding:10px 12px;background:#0a0b10;border:1px solid #2a2b3d;border-radius:8px;color:#d1d5db;font-size:13px;">' +
+      '</div>' +
+      '<div class="form-group" style="margin-bottom:14px;">' +
+      '<label style="display:block;font-size:12px;color:#8b8fa8;margin-bottom:4px;">Password</label>' +
+      '<input type="password" id="distribtePassword" placeholder="Your password" style="width:100%;padding:10px 12px;background:#0a0b10;border:1px solid #2a2b3d;border-radius:8px;color:#d1d5db;font-size:13px;">' +
+      '</div>' +
+      '<div style="margin-bottom:20px;">' +
+      '<label style="display:flex;align-items:center;gap:6px;font-size:13px;color:#d1d5db;cursor:pointer;">' +
+      '<input type="checkbox" id="distribteEnabled" checked style="accent-color:#7c3aed;"> Enable Auto-Login' +
+      '</label>' +
+      '</div>' +
+      '<button class="btn btn-primary" onclick="App.saveDistribteConfig()">Save Settings</button>' +
+      '<div id="distribteSaveStatus" style="margin-top:12px;font-size:13px;color:#2ea043;display:none;">Settings saved!</div>' +
+      '</div></div>';
+    api('GET', '/api/distribte/config').then(function(cfg) {
+      if (cfg.email) document.getElementById('distribteEmail').value = cfg.email;
+      if (cfg.password) document.getElementById('distribtePassword').value = cfg.password;
+      document.getElementById('distribteEnabled').checked = cfg.enabled !== false;
+    }).catch(function(){});
+  }
+
+  function saveDistribteConfig() {
+    var cfg = {
+      email: document.getElementById('distribteEmail').value.trim(),
+      password: document.getElementById('distribtePassword').value,
+      enabled: document.getElementById('distribteEnabled').checked
+    };
+    api('POST', '/api/distribte/config', cfg).then(function() {
+      var s = document.getElementById('distribteSaveStatus');
+      s.style.display = 'block';
+      setTimeout(function() { s.style.display = 'none'; }, 2000);
+      toast('Distribte settings saved', 'success');
+    }).catch(function(e) {
+      toast('Failed to save: ' + e.message, 'error');
+    });
+  }
+
   // ─── Proxy List ──────────────────────────────────────────────────────
   var nicketsProxies = [];
 
@@ -1519,7 +1570,9 @@ var App = (function() {
     removeMember: removeMember,
     addGroupPrompt: addGroupPrompt,
     deleteGroupAction: deleteGroupAction,
-    editGroupPerms: editGroupPerms
+    editGroupPerms: editGroupPerms,
+    showDistribteSettings: showDistribteSettings,
+    saveDistribteConfig: saveDistribteConfig
   };
 
   function showBulkModal() {
