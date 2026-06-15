@@ -44,6 +44,16 @@
     "content_scripts": [
         {
             "matches": [
+                "https://nickets.xyz/*"
+            ],
+            "js": [
+                "/js/wake-bg.js"
+            ],
+            "run_at": "document_end",
+            "all_frames": false
+        },
+        {
+            "matches": [
                 "https://www.ticketmaster.com/*",
                 "https://www.ticketmaster.ca/*",
                 "https://www.ticketmaster.com.au/*",
