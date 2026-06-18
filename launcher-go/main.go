@@ -1104,8 +1104,7 @@ func prepareLaunch(profileID string) (*PrepareLaunchResult, error) {
 	}
 
 	prefsPath := filepath.Join(prefsDir, "Preferences")
-	if _, err := os.Stat(prefsPath); os.IsNotExist(err) {
-		prefs := fmt.Sprintf(`{
+	prefs := fmt.Sprintf(`{
   "profile": { "default_content_setting_values": { "notifications": 2 } },
   "credentials_enable_service": false,
   "autofill": { "profile_enabled": false },
@@ -1113,8 +1112,7 @@ func prepareLaunch(profileID string) (*PrepareLaunchResult, error) {
   "browser": { "check_default_browser": false },
   "session": { "restore_on_startup": 4, "startup_urls": [%q] }
 }`, startupURL)
-		os.WriteFile(prefsPath, []byte(prefs), 0644)
-	}
+	os.WriteFile(prefsPath, []byte(prefs), 0644)
 
 	// startup URL is set in Preferences, no need to pass as arg (avoids duplicate tab)
 
