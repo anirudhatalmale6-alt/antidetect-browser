@@ -1048,6 +1048,14 @@ func prepareLaunch(profileID string) (*PrepareLaunchResult, error) {
 		os.Remove(filepath.Join(profileDir, lockFile))
 	}
 
+	// Remove old MV2 proxy-auth extensions (unsupported in latest Chromium)
+	os.RemoveAll(filepath.Join(dataDir, "proxy-auth", profile.ID))
+
+	// Clean Chrome's cached extension state to prevent loading old extensions
+	os.RemoveAll(filepath.Join(profileDir, "Default", "Extensions"))
+	os.RemoveAll(filepath.Join(profileDir, "Default", "Extension State"))
+	os.RemoveAll(filepath.Join(profileDir, "Default", "Local Extension Settings"))
+
 	args := []string{
 		"--user-data-dir=" + profileDir,
 		"--no-first-run",
