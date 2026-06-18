@@ -18,6 +18,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -1034,8 +1035,6 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 		"--no-first-run",
 		"--no-default-browser-check",
 		"--no-sandbox",
-		"--disable-gpu",
-		"--disable-software-rasterizer",
 		"--disable-background-networking",
 		"--disable-sync",
 		"--disable-translate",
@@ -1109,6 +1108,11 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 	log.Printf("Launching profile %s (%s) with %d user extensions: %s %v", profile.ID, profile.Name, len(loadedExtNames), chromiumPath, args)
 
 	cmd := exec.Command(chromiumPath, args...)
+
+	// Detach Chrome from Electron's Windows Job Object so it doesn't get killed
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		CreationFlags: 0x01000000 | 0x00000200, // CREATE_BREAKAWAY_FROM_JOB | CREATE_NEW_PROCESS_GROUP
+	}
 
 	// Build clean environment - filter out Electron/Chrome/Node vars that crash the launched browser
 	var cleanEnv []string
