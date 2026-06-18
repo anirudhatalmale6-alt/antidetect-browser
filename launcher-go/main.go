@@ -1034,6 +1034,8 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 		"--no-first-run",
 		"--no-default-browser-check",
 		"--no-sandbox",
+		"--disable-gpu",
+		"--disable-software-rasterizer",
 		"--disable-background-networking",
 		"--disable-sync",
 		"--disable-translate",
@@ -1107,7 +1109,21 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 	log.Printf("Launching profile %s (%s) with %d user extensions: %s %v", profile.ID, profile.Name, len(loadedExtNames), chromiumPath, args)
 
 	cmd := exec.Command(chromiumPath, args...)
-	cmd.Env = append(os.Environ(),
+
+	// Build clean environment - filter out Electron/Chrome/Node vars that crash the launched browser
+	var cleanEnv []string
+	for _, e := range os.Environ() {
+		upper := strings.ToUpper(e)
+		if strings.HasPrefix(upper, "ELECTRON") ||
+			strings.HasPrefix(upper, "CHROME_") ||
+			strings.HasPrefix(upper, "NODE_") ||
+			strings.HasPrefix(upper, "ORIGINAL_XDG") ||
+			strings.HasPrefix(upper, "NICKETS_") {
+			continue
+		}
+		cleanEnv = append(cleanEnv, e)
+	}
+	cmd.Env = append(cleanEnv,
 		"GOOGLE_API_KEY=no",
 		"GOOGLE_DEFAULT_CLIENT_ID=no",
 		"GOOGLE_DEFAULT_CLIENT_SECRET=no",
@@ -1136,9 +1152,12 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 	pName := profile.Name
 	pDir := profileDir
 	go func() {
-		cmd.Wait()
+		err := cmd.Wait()
 		if chromeLog != nil {
 			chromeLog.Close()
+		}
+		if err != nil {
+			log.Printf("Profile %s (%s) exited with error: %v", pID, pName, err)
 		}
 		mu.Lock()
 		delete(processes, pID)
