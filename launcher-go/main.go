@@ -609,28 +609,28 @@ func ensureProxyAuthExtension(profileID, proxyStr string) (string, error) {
 	os.MkdirAll(extDir, 0755)
 
 	manifest := `{
-  "manifest_version": 3,
+  "manifest_version": 2,
   "name": "Proxy Auth Helper",
-  "version": "1.2",
-  "permissions": ["webRequest", "webRequestAuthProvider"],
-  "host_permissions": ["<all_urls>"],
+  "version": "2.0",
+  "permissions": ["webRequest", "webRequestBlocking", "<all_urls>"],
   "background": {
-    "service_worker": "background.js"
+    "scripts": ["background.js"],
+    "persistent": true
   }
 }`
 
 	bg := fmt.Sprintf(`
 chrome.webRequest.onAuthRequired.addListener(
-  function(details, asyncCallback) {
-    asyncCallback({
+  function(details) {
+    return {
       authCredentials: {
         username: %q,
         password: %q
       }
-    });
+    };
   },
   { urls: ["<all_urls>"] },
-  ["asyncBlocking"]
+  ["blocking"]
 );
 `, user, pass)
 
