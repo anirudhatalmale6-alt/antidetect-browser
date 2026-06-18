@@ -1494,10 +1494,15 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Proxy %s %s -> %s", r.Method, r.URL.Path, targetURL)
 
-	// Create the outgoing request
+	// Read full body so we can set Content-Length properly
 	var bodyReader io.Reader
-	if r.Method == http.MethodPost || r.Method == http.MethodPut {
-		bodyReader = r.Body
+	if r.Method == http.MethodPost || r.Method == http.MethodPut || r.Method == http.MethodPatch {
+		bodyBytes, err := io.ReadAll(r.Body)
+		if err != nil {
+			jsonError(w, fmt.Sprintf("Failed to read body: %v", err), 500)
+			return
+		}
+		bodyReader = bytes.NewReader(bodyBytes)
 	}
 
 	proxyReq, err := http.NewRequest(r.Method, targetURL, bodyReader)
@@ -1506,12 +1511,13 @@ func handleProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Forward Content-Type header
+	// Forward relevant headers
 	if ct := r.Header.Get("Content-Type"); ct != "" {
 		proxyReq.Header.Set("Content-Type", ct)
 	}
 
-	resp, err := httpClient.Do(proxyReq)
+	proxyClient := &http.Client{Timeout: 60 * time.Second}
+	resp, err := proxyClient.Do(proxyReq)
 	if err != nil {
 		jsonError(w, fmt.Sprintf("Proxy error: %v", err), 502)
 		return
