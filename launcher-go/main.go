@@ -1060,12 +1060,9 @@ func prepareLaunch(profileID string) (*PrepareLaunchResult, error) {
 	extensions := []string{fpDir}
 	var loadedExtNames []string
 
-	distribtePath := findBuiltinDistribte()
-	if distribtePath != "" {
-		extensions = append(extensions, distribtePath)
-		loadedExtNames = append(loadedExtNames, "Distribte")
-		log.Printf("Loading builtin Distribte from %s", distribtePath)
-	}
+	// Distribte disabled for now - original code uses MLX-specific APIs that crash standard Chromium
+	// Will re-enable once we build a compatible version
+	// distribtePath := findBuiltinDistribte()
 
 	userExts := listUserExtensions()
 	for _, ext := range userExts {
