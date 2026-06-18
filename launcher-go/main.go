@@ -1101,17 +1101,19 @@ func prepareLaunch(profileID string) (*PrepareLaunchResult, error) {
 	}
 
 	prefsPath := filepath.Join(prefsDir, "Preferences")
-	prefs := fmt.Sprintf(`{
+	if _, err := os.Stat(prefsPath); os.IsNotExist(err) {
+		prefs := `{
   "profile": { "default_content_setting_values": { "notifications": 2 } },
   "credentials_enable_service": false,
   "autofill": { "profile_enabled": false },
   "translate": { "enabled": false },
-  "browser": { "check_default_browser": false },
-  "session": { "restore_on_startup": 4, "startup_urls": [%q] }
-}`, startupURL)
-	os.WriteFile(prefsPath, []byte(prefs), 0644)
+  "browser": { "check_default_browser": false }
+}`
+		os.WriteFile(prefsPath, []byte(prefs), 0644)
+	}
 
-	// startup URL is set in Preferences, no need to pass as arg (avoids duplicate tab)
+	// Pass startup URL as command line arg (Preferences gets ignored by Chrome's integrity check)
+	args = append(args, startupURL)
 
 	log.Printf("Prepared profile %s (%s) with %d user extensions: %s %v", profile.ID, profile.Name, len(loadedExtNames), chromiumPath, args)
 
