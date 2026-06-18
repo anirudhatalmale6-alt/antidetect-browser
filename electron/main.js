@@ -1,5 +1,5 @@
-const { app, BrowserWindow, Menu } = require('electron')
-const { spawn, execFile } = require('child_process')
+const { app, BrowserWindow, Menu, ipcMain } = require('electron')
+const { spawn, execFile, exec } = require('child_process')
 const path = require('path')
 const fs = require('fs')
 const os = require('os')
@@ -8,6 +8,7 @@ const http = require('http')
 let goProcess = null
 let mainWindow = null
 let serverPort = null
+const chromeProcesses = new Map()
 
 const ANTIDETECT_DIR = path.join(os.homedir(), '.antidetect')
 const PORT_FILE = path.join(ANTIDETECT_DIR, '.port')
@@ -142,7 +143,8 @@ function createWindow(port) {
     backgroundColor: '#1a1a2e',
     webPreferences: {
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
     }
   })
 
@@ -163,6 +165,60 @@ function createWindow(port) {
   })
 }
 
+function buildCleanEnv() {
+  const clean = {}
+  for (const [key, val] of Object.entries(process.env)) {
+    const upper = key.toUpperCase()
+    if (upper.startsWith('ELECTRON') ||
+        upper.startsWith('CHROME_') ||
+        upper.startsWith('NODE_') ||
+        upper.startsWith('ORIGINAL_XDG') ||
+        upper.startsWith('NICKETS_')) {
+      continue
+    }
+    clean[key] = val
+  }
+  clean.GOOGLE_API_KEY = 'no'
+  clean.GOOGLE_DEFAULT_CLIENT_ID = 'no'
+  clean.GOOGLE_DEFAULT_CLIENT_SECRET = 'no'
+  return clean
+}
+
+function setupIPC() {
+  ipcMain.handle('launch-chrome', async (event, chromePath, args) => {
+    try {
+      const cleanEnv = buildCleanEnv()
+      const child = spawn(chromePath, args, {
+        detached: true,
+        stdio: 'ignore',
+        env: cleanEnv
+      })
+      child.unref()
+
+      const pid = child.pid
+      chromeProcesses.set(pid, child)
+
+      child.on('exit', () => {
+        chromeProcesses.delete(pid)
+      })
+
+      return { ok: true, pid: pid }
+    } catch (err) {
+      return { ok: false, error: err.message }
+    }
+  })
+
+  ipcMain.handle('stop-chrome', async (event, pid) => {
+    try {
+      exec(`taskkill /F /T /PID ${pid}`, () => {})
+      chromeProcesses.delete(pid)
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, error: err.message }
+    }
+  })
+}
+
 function killServer() {
   if (!goProcess) return
 
@@ -180,6 +236,7 @@ function killServer() {
 }
 
 app.whenReady().then(async () => {
+  setupIPC()
   try {
     const port = await startServer()
     createWindow(port)

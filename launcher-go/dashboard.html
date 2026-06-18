@@ -782,6 +782,33 @@ var App = (function() {
 
   // Launch / Stop
   function launchProfile(id) {
+    // If running inside Electron, use Electron's process spawning (avoids job object issues)
+    if (window.nickets && window.nickets.isElectron) {
+      api('POST', '/api/prepare-launch', { profile_id: id })
+        .then(function(data) {
+          return window.nickets.launchChrome(data.chrome_path, data.args).then(function(result) {
+            if (!result.ok) throw new Error(result.error || 'Electron launch failed');
+            // Notify Go server about the PID for tracking
+            api('POST', '/api/electron-notify', { profile_id: id, pid: result.pid, action: 'launched' });
+            var msg = 'Profile launched';
+            var exts = data.extensions_loaded || [];
+            if (exts.length > 0) {
+              msg += ' with ' + exts.length + ' extension(s): ' + exts.join(', ');
+            }
+            toast(msg, 'success');
+            pollStatus();
+          });
+        })
+        .catch(function(err) {
+          if (err.message.indexOf('not downloaded') >= 0) {
+            toast('Chrome not ready yet. It will auto-download, please wait.', 'error');
+          } else {
+            toast('Launch failed: ' + err.message, 'error');
+          }
+        });
+      return;
+    }
+    // Fallback: Go launches Chrome directly (standalone mode)
     api('POST', '/api/launch', { profile_id: id })
       .then(function(data) {
         var msg = 'Profile launched';

@@ -763,6 +763,13 @@ type LaunchResult struct {
 	ExtensionsLoaded []string `json:"extensions_loaded"`
 }
 
+type PrepareLaunchResult struct {
+	ChromePath       string   `json:"chrome_path"`
+	Args             []string `json:"args"`
+	ExtensionsLoaded []string `json:"extensions_loaded"`
+	ProfileID        string   `json:"profile_id"`
+}
+
 func downloadProfileSync(profileID, profileDir string) {
 	srvURL := serverURL
 	if srvURL == "" {
@@ -962,7 +969,7 @@ func updateDistribteConfig(extensionPaths []string) {
 	}
 }
 
-func launchProfile(profileID string) (*LaunchResult, error) {
+func prepareLaunch(profileID string) (*PrepareLaunchResult, error) {
 	mu.Lock()
 	if _, ok := processes[profileID]; ok {
 		mu.Unlock()
@@ -1105,16 +1112,30 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 
 	// startup URL is set in Preferences, no need to pass as arg (avoids duplicate tab)
 
-	log.Printf("Launching profile %s (%s) with %d user extensions: %s %v", profile.ID, profile.Name, len(loadedExtNames), chromiumPath, args)
+	log.Printf("Prepared profile %s (%s) with %d user extensions: %s %v", profile.ID, profile.Name, len(loadedExtNames), chromiumPath, args)
 
-	cmd := exec.Command(chromiumPath, args...)
+	return &PrepareLaunchResult{
+		ChromePath:       chromiumPath,
+		Args:             args,
+		ExtensionsLoaded: loadedExtNames,
+		ProfileID:        profile.ID,
+	}, nil
+}
 
-	// Detach Chrome from Electron's Windows Job Object so it doesn't get killed
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		CreationFlags: 0x01000000 | 0x00000200, // CREATE_BREAKAWAY_FROM_JOB | CREATE_NEW_PROCESS_GROUP
+func launchProfile(profileID string) (*LaunchResult, error) {
+	prepared, err := prepareLaunch(profileID)
+	if err != nil {
+		return nil, err
 	}
 
-	// Build clean environment - filter out Electron/Chrome/Node vars that crash the launched browser
+	profileDir := filepath.Join(dataDir, "profiles", prepared.ProfileID)
+
+	cmd := exec.Command(prepared.ChromePath, prepared.Args...)
+
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		CreationFlags: 0x01000000 | 0x00000200,
+	}
+
 	var cleanEnv []string
 	for _, e := range os.Environ() {
 		upper := strings.ToUpper(e)
@@ -1133,7 +1154,6 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 		"GOOGLE_DEFAULT_CLIENT_SECRET=no",
 	)
 
-	// Redirect Chrome output to log file to avoid pipe buffer issues when running inside Electron
 	chromeLogPath := filepath.Join(profileDir, "chrome-output.log")
 	chromeLog, err := os.Create(chromeLogPath)
 	if err == nil {
@@ -1149,11 +1169,10 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 	}
 
 	mu.Lock()
-	processes[profile.ID] = cmd.Process
+	processes[prepared.ProfileID] = cmd.Process
 	mu.Unlock()
 
-	pID := profile.ID
-	pName := profile.Name
+	pID := prepared.ProfileID
 	pDir := profileDir
 	go func() {
 		err := cmd.Wait()
@@ -1161,17 +1180,17 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 			chromeLog.Close()
 		}
 		if err != nil {
-			log.Printf("Profile %s (%s) exited with error: %v", pID, pName, err)
+			log.Printf("Profile %s exited with error: %v", pID, err)
 		}
 		mu.Lock()
 		delete(processes, pID)
 		mu.Unlock()
-		log.Printf("Profile %s (%s) closed, syncing data...", pID, pName)
+		log.Printf("Profile %s closed, syncing data...", pID)
 		uploadProfileSync(pID, pDir)
-		log.Printf("Profile %s (%s) sync complete", pID, pName)
+		log.Printf("Profile %s sync complete", pID)
 	}()
 
-	return &LaunchResult{ExtensionsLoaded: loadedExtNames}, nil
+	return &LaunchResult{ExtensionsLoaded: prepared.ExtensionsLoaded}, nil
 }
 
 func stopProfile(profileID string) error {
@@ -1304,6 +1323,72 @@ func handleLaunch(w http.ResponseWriter, r *http.Request) {
 		"profile_id":        req.ProfileID,
 		"extensions_loaded": extNames,
 	})
+}
+
+func handlePrepareLaunch(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonError(w, "POST required", 405)
+		return
+	}
+
+	var req LaunchRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonError(w, "Invalid request body", 400)
+		return
+	}
+
+	if req.ProfileID == "" {
+		jsonError(w, "profile_id required", 400)
+		return
+	}
+
+	result, err := prepareLaunch(req.ProfileID)
+	if err != nil {
+		jsonError(w, err.Error(), 500)
+		return
+	}
+
+	jsonOK(w, map[string]interface{}{
+		"chrome_path":       result.ChromePath,
+		"args":              result.Args,
+		"extensions_loaded": result.ExtensionsLoaded,
+		"profile_id":        result.ProfileID,
+	})
+}
+
+func handleElectronNotify(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonError(w, "POST required", 405)
+		return
+	}
+
+	var req struct {
+		ProfileID string `json:"profile_id"`
+		PID       int    `json:"pid"`
+		Action    string `json:"action"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		jsonError(w, "Invalid request body", 400)
+		return
+	}
+
+	if req.Action == "launched" && req.PID > 0 {
+		p, _ := os.FindProcess(req.PID)
+		if p != nil {
+			mu.Lock()
+			processes[req.ProfileID] = p
+			mu.Unlock()
+			log.Printf("Electron launched profile %s with PID %d", req.ProfileID, req.PID)
+		}
+	} else if req.Action == "stopped" {
+		mu.Lock()
+		delete(processes, req.ProfileID)
+		mu.Unlock()
+		profileDir := filepath.Join(dataDir, "profiles", req.ProfileID)
+		go uploadProfileSync(req.ProfileID, profileDir)
+	}
+
+	jsonOK(w, map[string]string{"status": "ok"})
 }
 
 func handleStop(w http.ResponseWriter, r *http.Request) {
@@ -1578,6 +1663,8 @@ func main() {
 	// Local handlers (registered first — specific paths take priority)
 	mux.HandleFunc("/api/connect", withCORS(handleConnect))
 	mux.HandleFunc("/api/launch", withCORS(handleLaunch))
+	mux.HandleFunc("/api/prepare-launch", withCORS(handlePrepareLaunch))
+	mux.HandleFunc("/api/electron-notify", withCORS(handleElectronNotify))
 	mux.HandleFunc("/api/stop", withCORS(handleStop))
 	mux.HandleFunc("/api/status", withCORS(handleStatus))
 	mux.HandleFunc("/api/download-chromium", withCORS(handleDownloadChromium))
