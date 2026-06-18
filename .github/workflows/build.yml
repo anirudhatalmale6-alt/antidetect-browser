@@ -36,19 +36,12 @@ jobs:
         working-directory: electron
         run: npm install
 
-      - name: Build Electron installer
+      - name: Build and publish Electron installer
         working-directory: electron
-        run: npx electron-builder --win --x64 --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder --win --x64 --publish always
 
       - name: List build output
         run: dir electron\dist\
         shell: cmd
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v2.0.0-${{ github.run_number }}
-          name: Nickets v2.0.0 Build ${{ github.run_number }}
-          files: |
-            electron/dist/NicketsSetup.exe
-          make_latest: true

@@ -1,5 +1,6 @@
-const { app, BrowserWindow, Menu, ipcMain } = require('electron')
+const { app, BrowserWindow, Menu, ipcMain, dialog } = require('electron')
 const { spawn, execFile, exec } = require('child_process')
+const { autoUpdater } = require('electron-updater')
 const path = require('path')
 const fs = require('fs')
 const os = require('os')
@@ -235,11 +236,41 @@ function killServer() {
   }, 2000)
 }
 
+function setupAutoUpdate() {
+  autoUpdater.autoDownload = true
+  autoUpdater.autoInstallOnAppQuit = true
+
+  autoUpdater.on('update-available', (info) => {
+    console.log('Update available:', info.version)
+    if (mainWindow) {
+      mainWindow.webContents.executeJavaScript(
+        `if(typeof toast==='function') toast('Update v${info.version} downloading...', 'success');`
+      )
+    }
+  })
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('Update downloaded:', info.version)
+    if (mainWindow) {
+      mainWindow.webContents.executeJavaScript(
+        `if(typeof toast==='function') toast('Update v${info.version} ready - will install on restart', 'success');`
+      )
+    }
+  })
+
+  autoUpdater.on('error', (err) => {
+    console.error('Auto-update error:', err.message)
+  })
+
+  autoUpdater.checkForUpdatesAndNotify()
+}
+
 app.whenReady().then(async () => {
   setupIPC()
   try {
     const port = await startServer()
     createWindow(port)
+    setupAutoUpdate()
   } catch (err) {
     console.error('Startup failed:', err)
     if (goProcess) {

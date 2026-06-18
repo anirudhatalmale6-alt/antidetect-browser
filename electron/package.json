@@ -9,6 +9,9 @@
     "start": "electron .",
     "build": "electron-builder --win --x64"
   },
+  "dependencies": {
+    "electron-updater": "^6.1.7"
+  },
   "devDependencies": {
     "electron": "^28.3.3",
     "electron-builder": "^24.13.3"
@@ -20,6 +23,13 @@
     "directories": {
       "output": "dist"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "anirudhatalmale6-alt",
+        "repo": "antidetect-browser"
+      }
+    ],
     "win": {
       "target": [
         {
