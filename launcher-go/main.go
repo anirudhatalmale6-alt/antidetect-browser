@@ -1066,6 +1066,8 @@ func prepareLaunch(profileID string) (*PrepareLaunchResult, error) {
 		"--disable-infobars",
 		"--disable-features=MediaRouter",
 		"--disable-gpu-shader-disk-cache",
+		"--disable-session-crashed-bubble",
+		"--hide-crash-restore-bubble",
 	}
 
 	if profile.WindowWidth > 0 && profile.WindowHeight > 0 {
@@ -1101,7 +1103,7 @@ func prepareLaunch(profileID string) (*PrepareLaunchResult, error) {
 
 	args = append(args, "--load-extension="+strings.Join(extensions, ","))
 
-	// Clean up session restore data to prevent duplicate tabs
+	// Clean ALL session restore data to prevent duplicate tabs
 	prefsDir := filepath.Join(profileDir, "Default")
 	os.MkdirAll(prefsDir, 0755)
 	os.Remove(filepath.Join(prefsDir, "Preferences"))
@@ -1110,6 +1112,9 @@ func prepareLaunch(profileID string) (*PrepareLaunchResult, error) {
 	os.Remove(filepath.Join(prefsDir, "Current Tabs"))
 	os.Remove(filepath.Join(prefsDir, "Last Session"))
 	os.Remove(filepath.Join(prefsDir, "Last Tabs"))
+	os.RemoveAll(filepath.Join(prefsDir, "Sessions"))
+	// Write sentinel so Chrome doesn't show first-run experience
+	os.WriteFile(filepath.Join(profileDir, "First Run"), []byte(""), 0644)
 
 	startupURL := profile.StartupURL
 	if startupURL == "" {
