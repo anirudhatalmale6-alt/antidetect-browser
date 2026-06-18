@@ -1024,10 +1024,16 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 		}
 	}
 
+	// Clean up lock files from previous crashed sessions
+	for _, lockFile := range []string{"SingletonLock", "SingletonCookie", "SingletonSocket"} {
+		os.Remove(filepath.Join(profileDir, lockFile))
+	}
+
 	args := []string{
 		"--user-data-dir=" + profileDir,
 		"--no-first-run",
 		"--no-default-browser-check",
+		"--no-sandbox",
 		"--disable-background-networking",
 		"--disable-sync",
 		"--disable-translate",
@@ -1106,9 +1112,19 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 		"GOOGLE_DEFAULT_CLIENT_ID=no",
 		"GOOGLE_DEFAULT_CLIENT_SECRET=no",
 	)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+
+	// Redirect Chrome output to log file to avoid pipe buffer issues when running inside Electron
+	chromeLogPath := filepath.Join(profileDir, "chrome-output.log")
+	chromeLog, err := os.Create(chromeLogPath)
+	if err == nil {
+		cmd.Stdout = chromeLog
+		cmd.Stderr = chromeLog
+	}
+
 	if err := cmd.Start(); err != nil {
+		if chromeLog != nil {
+			chromeLog.Close()
+		}
 		return nil, fmt.Errorf("start chrome: %v", err)
 	}
 
@@ -1121,6 +1137,9 @@ func launchProfile(profileID string) (*LaunchResult, error) {
 	pDir := profileDir
 	go func() {
 		cmd.Wait()
+		if chromeLog != nil {
+			chromeLog.Close()
+		}
 		mu.Lock()
 		delete(processes, pID)
 		mu.Unlock()
