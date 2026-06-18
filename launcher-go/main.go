@@ -1101,11 +1101,15 @@ func prepareLaunch(profileID string) (*PrepareLaunchResult, error) {
 
 	args = append(args, "--load-extension="+strings.Join(extensions, ","))
 
-	// Clean up old Preferences that had restore_on_startup (causes duplicate tabs)
+	// Clean up session restore data to prevent duplicate tabs
 	prefsDir := filepath.Join(profileDir, "Default")
 	os.MkdirAll(prefsDir, 0755)
 	os.Remove(filepath.Join(prefsDir, "Preferences"))
 	os.Remove(filepath.Join(prefsDir, "Secure Preferences"))
+	os.Remove(filepath.Join(prefsDir, "Current Session"))
+	os.Remove(filepath.Join(prefsDir, "Current Tabs"))
+	os.Remove(filepath.Join(prefsDir, "Last Session"))
+	os.Remove(filepath.Join(prefsDir, "Last Tabs"))
 
 	startupURL := profile.StartupURL
 	if startupURL == "" {

@@ -786,7 +786,7 @@ var App = (function() {
     if (window.nickets && window.nickets.isElectron) {
       api('POST', '/api/prepare-launch', { profile_id: id })
         .then(function(data) {
-          return window.nickets.launchChrome(data.chrome_path, data.args).then(function(result) {
+          return window.nickets.launchChrome(data.chrome_path, data.args, data.profile_id).then(function(result) {
             if (!result.ok) throw new Error(result.error || 'Electron launch failed');
             // Notify Go server about the PID for tracking
             api('POST', '/api/electron-notify', { profile_id: id, pid: result.pid, action: 'launched' });

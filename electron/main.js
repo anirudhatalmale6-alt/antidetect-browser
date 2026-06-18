@@ -186,7 +186,7 @@ function buildCleanEnv() {
 }
 
 function setupIPC() {
-  ipcMain.handle('launch-chrome', async (event, chromePath, args) => {
+  ipcMain.handle('launch-chrome', async (event, chromePath, args, profileId) => {
     try {
       const cleanEnv = buildCleanEnv()
       const child = spawn(chromePath, args, {
@@ -201,6 +201,20 @@ function setupIPC() {
 
       child.on('exit', () => {
         chromeProcesses.delete(pid)
+        // Notify Go server that profile closed so status updates
+        if (serverPort && profileId) {
+          const postData = JSON.stringify({ profile_id: profileId, pid: pid, action: 'stopped' })
+          const req = http.request({
+            hostname: '127.0.0.1',
+            port: serverPort,
+            path: '/api/electron-notify',
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Content-Length': postData.length }
+          })
+          req.on('error', () => {})
+          req.write(postData)
+          req.end()
+        }
       })
 
       return { ok: true, pid: pid }
