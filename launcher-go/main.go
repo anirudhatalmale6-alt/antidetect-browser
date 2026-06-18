@@ -1435,6 +1435,37 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(status)
 }
 
+func handleProxyList(w http.ResponseWriter, r *http.Request) {
+	csvPath := filepath.Join(dataDir, "proxies", "PROXY.csv")
+	data, err := os.ReadFile(csvPath)
+	if err != nil {
+		jsonOK(w, map[string]interface{}{"proxies": []string{}})
+		return
+	}
+
+	var proxies []string
+	lines := strings.Split(string(data), "\n")
+	for i, line := range lines {
+		if i == 0 {
+			continue // skip header
+		}
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, ",", 3)
+		if len(parts) >= 2 {
+			proxy := strings.TrimSpace(parts[1])
+			if proxy != "" && strings.Contains(proxy, ":") {
+				proxies = append(proxies, proxy)
+			}
+		}
+	}
+
+	log.Printf("Loaded %d proxies from %s", len(proxies), csvPath)
+	jsonOK(w, map[string]interface{}{"proxies": proxies})
+}
+
 func handleDownloadChromium(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		jsonError(w, "POST required", 405)
@@ -1676,6 +1707,7 @@ func main() {
 	mux.HandleFunc("/api/stop", withCORS(handleStop))
 	mux.HandleFunc("/api/status", withCORS(handleStatus))
 	mux.HandleFunc("/api/download-chromium", withCORS(handleDownloadChromium))
+	mux.HandleFunc("/api/proxy-list", withCORS(handleProxyList))
 	mux.HandleFunc("/api/extensions", withCORS(handleExtensions))
 	mux.HandleFunc("/api/open-extensions", withCORS(handleOpenExtensionsFolder))
 	mux.HandleFunc("/api/quit", func(w http.ResponseWriter, r *http.Request) {
