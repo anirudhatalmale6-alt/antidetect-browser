@@ -1041,7 +1041,6 @@ func prepareLaunch(profileID string) (*PrepareLaunchResult, error) {
 		"--user-data-dir=" + profileDir,
 		"--no-first-run",
 		"--no-default-browser-check",
-		"--no-sandbox",
 		"--disable-background-networking",
 		"--disable-sync",
 		"--disable-translate",
