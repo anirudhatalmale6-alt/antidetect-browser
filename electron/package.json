@@ -27,7 +27,8 @@
       {
         "provider": "github",
         "owner": "anirudhatalmale6-alt",
-        "repo": "antidetect-browser"
+        "repo": "antidetect-browser",
+        "releaseType": "release"
       }
     ],
     "win": {
