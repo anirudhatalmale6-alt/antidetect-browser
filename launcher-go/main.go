@@ -597,6 +597,41 @@ func writeFPConfig(extDir string, fingerprint json.RawMessage) error {
 // Proxy auth extension (MV2 — webRequest.onAuthRequired needs MV2)
 // ---------------------------------------------------------------------------
 
+func addProxyAuthToFPExtension(fpDir, user, pass string) {
+	manifest := `{
+  "manifest_version": 3,
+  "name": "Fingerprint Guard",
+  "version": "1.0",
+  "description": "Browser fingerprint management",
+  "permissions": ["storage", "webRequest", "webRequestAuthProvider"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "bg.js"
+  },
+  "content_scripts": [{
+    "matches": ["<all_urls>"],
+    "js": ["inject.js"],
+    "run_at": "document_start",
+    "world": "MAIN"
+  }]
+}`
+	os.WriteFile(filepath.Join(fpDir, "manifest.json"), []byte(manifest), 0644)
+
+	bg := fmt.Sprintf(`
+chrome.webRequest.onAuthRequired.addListener(
+  function(details, asyncCallback) {
+    asyncCallback({
+      authCredentials: { username: %q, password: %q }
+    });
+  },
+  { urls: ["<all_urls>"] },
+  ["asyncBlocking"]
+);
+`, user, pass)
+	os.WriteFile(filepath.Join(fpDir, "bg.js"), []byte(bg), 0644)
+	log.Printf("Added proxy auth to FP extension for user %s", user)
+}
+
 func ensureProxyAuthExtension(profileID, proxyStr string) (string, error) {
 	parts := strings.SplitN(proxyStr, ":", 4)
 	if len(parts) < 4 {
@@ -1033,12 +1068,19 @@ func prepareLaunch(profileID string) (*PrepareLaunchResult, error) {
 		args = append(args, "--user-agent="+profile.UserAgent)
 	}
 
+	// If proxy has auth credentials, add proxy auth service worker to FP extension
+	if profile.Proxy != "" {
+		parts := strings.SplitN(profile.Proxy, ":", 4)
+		if len(parts) >= 2 {
+			args = append(args, fmt.Sprintf("--proxy-server=%s:%s", parts[0], parts[1]))
+		}
+		if len(parts) == 4 {
+			addProxyAuthToFPExtension(fpDir, parts[2], parts[3])
+		}
+	}
+
 	extensions := []string{fpDir}
 	var loadedExtNames []string
-
-	// Distribte disabled for now - original code uses MLX-specific APIs that crash standard Chromium
-	// Will re-enable once we build a compatible version
-	// distribtePath := findBuiltinDistribte()
 
 	userExts := listUserExtensions()
 	for _, ext := range userExts {
@@ -1049,47 +1091,19 @@ func prepareLaunch(profileID string) (*PrepareLaunchResult, error) {
 		}
 	}
 
-	if profile.Proxy != "" {
-		parts := strings.SplitN(profile.Proxy, ":", 4)
-		if len(parts) >= 2 {
-			args = append(args, fmt.Sprintf("--proxy-server=%s:%s", parts[0], parts[1]))
-		}
-		if len(parts) == 4 {
-			proxyAuthDir, err := ensureProxyAuthExtension(profile.ID, profile.Proxy)
-			if err != nil {
-				return nil, fmt.Errorf("proxy auth extension: %v", err)
-			}
-			if proxyAuthDir != "" {
-				extensions = append(extensions, proxyAuthDir)
-			}
-		}
-	}
-
 	args = append(args, "--load-extension="+strings.Join(extensions, ","))
 
-	updateDistribteConfig(extensions)
-
+	// Clean up old Preferences that had restore_on_startup (causes duplicate tabs)
 	prefsDir := filepath.Join(profileDir, "Default")
 	os.MkdirAll(prefsDir, 0755)
+	os.Remove(filepath.Join(prefsDir, "Preferences"))
+	os.Remove(filepath.Join(prefsDir, "Secure Preferences"))
 
 	startupURL := profile.StartupURL
 	if startupURL == "" {
 		startupURL = "https://nickets.xyz/" + profile.ID
 	}
 
-	prefsPath := filepath.Join(prefsDir, "Preferences")
-	if _, err := os.Stat(prefsPath); os.IsNotExist(err) {
-		prefs := `{
-  "profile": { "default_content_setting_values": { "notifications": 2 } },
-  "credentials_enable_service": false,
-  "autofill": { "profile_enabled": false },
-  "translate": { "enabled": false },
-  "browser": { "check_default_browser": false }
-}`
-		os.WriteFile(prefsPath, []byte(prefs), 0644)
-	}
-
-	// Pass startup URL as command line arg (Preferences gets ignored by Chrome's integrity check)
 	args = append(args, startupURL)
 
 	log.Printf("Prepared profile %s (%s) with %d user extensions: %s %v", profile.ID, profile.Name, len(loadedExtNames), chromiumPath, args)
