@@ -1060,6 +1060,13 @@ func prepareLaunch(profileID string) (*PrepareLaunchResult, error) {
 	extensions := []string{fpDir}
 	var loadedExtNames []string
 
+	distribtePath := findBuiltinDistribte()
+	if distribtePath != "" {
+		extensions = append(extensions, distribtePath)
+		loadedExtNames = append(loadedExtNames, "Distribte")
+		log.Printf("Loading builtin Distribte from %s", distribtePath)
+	}
+
 	userExts := listUserExtensions()
 	for _, ext := range userExts {
 		if ext.Enabled {
@@ -1093,7 +1100,7 @@ func prepareLaunch(profileID string) (*PrepareLaunchResult, error) {
 
 	startupURL := profile.StartupURL
 	if startupURL == "" {
-		startupURL = "https://nickets.xyz/" + profile.Name
+		startupURL = "https://nickets.xyz/" + profile.ID
 	}
 
 	prefsPath := filepath.Join(prefsDir, "Preferences")
