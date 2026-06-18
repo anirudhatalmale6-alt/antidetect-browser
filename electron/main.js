@@ -159,7 +159,7 @@ function createWindow(port) {
   mainWindow.on('page-title-updated', (e) => {
     e.preventDefault()
   })
-  mainWindow.setTitle('Nickets')
+  mainWindow.setTitle('Nickets v' + app.getVersion())
 
   mainWindow.on('closed', () => {
     mainWindow = null
@@ -237,32 +237,57 @@ function killServer() {
 }
 
 function setupAutoUpdate() {
-  autoUpdater.autoDownload = true
+  autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true
 
   autoUpdater.on('update-available', (info) => {
     console.log('Update available:', info.version)
-    if (mainWindow) {
-      mainWindow.webContents.executeJavaScript(
-        `if(typeof toast==='function') toast('Update v${info.version} downloading...', 'success');`
-      )
-    }
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'Update Available',
+      message: `Nickets v${info.version} is available (you have v${app.getVersion()})`,
+      detail: 'Would you like to update now?',
+      buttons: ['Update Now', 'Not Right Now'],
+      defaultId: 0,
+      cancelId: 1
+    }).then((result) => {
+      if (result.response === 0) {
+        if (mainWindow) {
+          mainWindow.webContents.executeJavaScript(
+            `if(typeof toast==='function') toast('Downloading update v${info.version}...', 'success');`
+          )
+        }
+        autoUpdater.downloadUpdate()
+      }
+    })
   })
 
   autoUpdater.on('update-downloaded', (info) => {
     console.log('Update downloaded:', info.version)
-    if (mainWindow) {
-      mainWindow.webContents.executeJavaScript(
-        `if(typeof toast==='function') toast('Update v${info.version} ready - will install on restart', 'success');`
-      )
-    }
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: 'Update Ready',
+      message: `Nickets v${info.version} has been downloaded`,
+      detail: 'The update will be installed when you restart the app. Restart now?',
+      buttons: ['Restart Now', 'Later'],
+      defaultId: 0,
+      cancelId: 1
+    }).then((result) => {
+      if (result.response === 0) {
+        autoUpdater.quitAndInstall()
+      }
+    })
+  })
+
+  autoUpdater.on('update-not-available', () => {
+    console.log('App is up to date: v' + app.getVersion())
   })
 
   autoUpdater.on('error', (err) => {
     console.error('Auto-update error:', err.message)
   })
 
-  autoUpdater.checkForUpdatesAndNotify()
+  autoUpdater.checkForUpdates()
 }
 
 app.whenReady().then(async () => {
