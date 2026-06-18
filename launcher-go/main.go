@@ -602,8 +602,6 @@ func ensureProxyAuthExtension(profileID, proxyStr string) (string, error) {
 	if len(parts) < 4 {
 		return "", nil
 	}
-	host := parts[0]
-	port := parts[1]
 	user := parts[2]
 	pass := parts[3]
 
@@ -613,8 +611,8 @@ func ensureProxyAuthExtension(profileID, proxyStr string) (string, error) {
 	manifest := `{
   "manifest_version": 3,
   "name": "Proxy Auth Helper",
-  "version": "1.1",
-  "permissions": ["proxy", "webRequest", "webRequestAuthProvider", "storage"],
+  "version": "1.2",
+  "permissions": ["webRequest", "webRequestAuthProvider"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
@@ -622,41 +620,19 @@ func ensureProxyAuthExtension(profileID, proxyStr string) (string, error) {
 }`
 
 	bg := fmt.Sprintf(`
-var proxyConfig = {
-  host: %q,
-  port: %q,
-  user: %q,
-  pass: %q
-};
-
-chrome.proxy.settings.set({
-  value: {
-    mode: "fixed_servers",
-    rules: {
-      singleProxy: {
-        scheme: "http",
-        host: proxyConfig.host,
-        port: parseInt(proxyConfig.port)
-      },
-      bypassList: ["localhost", "127.0.0.1"]
-    }
-  },
-  scope: "regular"
-});
-
 chrome.webRequest.onAuthRequired.addListener(
   function(details, asyncCallback) {
     asyncCallback({
       authCredentials: {
-        username: proxyConfig.user,
-        password: proxyConfig.pass
+        username: %q,
+        password: %q
       }
     });
   },
   { urls: ["<all_urls>"] },
   ["asyncBlocking"]
 );
-`, host, port, user, pass)
+`, user, pass)
 
 	if err := os.WriteFile(filepath.Join(extDir, "manifest.json"), []byte(manifest), 0644); err != nil {
 		return "", err
@@ -1075,6 +1051,9 @@ func prepareLaunch(profileID string) (*PrepareLaunchResult, error) {
 
 	if profile.Proxy != "" {
 		parts := strings.SplitN(profile.Proxy, ":", 4)
+		if len(parts) >= 2 {
+			args = append(args, fmt.Sprintf("--proxy-server=%s:%s", parts[0], parts[1]))
+		}
 		if len(parts) == 4 {
 			proxyAuthDir, err := ensureProxyAuthExtension(profile.ID, profile.Proxy)
 			if err != nil {
@@ -1083,8 +1062,6 @@ func prepareLaunch(profileID string) (*PrepareLaunchResult, error) {
 			if proxyAuthDir != "" {
 				extensions = append(extensions, proxyAuthDir)
 			}
-		} else if len(parts) >= 2 {
-			args = append(args, fmt.Sprintf("--proxy-server=%s:%s", parts[0], parts[1]))
 		}
 	}
 
