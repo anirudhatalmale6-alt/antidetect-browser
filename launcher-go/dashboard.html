@@ -1332,8 +1332,18 @@ var App = (function() {
 
   function getProxyValue() {
     var mode = document.getElementById('profileProxyMode').value;
-    if (mode === 'nickets' && nicketsProxies.length) {
-      return nicketsProxies[Math.floor(Math.random() * nicketsProxies.length)];
+    if (mode === 'nickets') {
+      if (nicketsProxies.length) {
+        return nicketsProxies[Math.floor(Math.random() * nicketsProxies.length)];
+      }
+      toast('Proxy list not loaded. Retrying...', 'error');
+      loadProxyList();
+      var editId = document.getElementById('editProfileId').value;
+      if (editId) {
+        var existing = state.profiles.find(function(x) { return x.id === editId; });
+        if (existing && existing.proxy) return existing.proxy;
+      }
+      return '';
     } else if (mode === 'custom') {
       return document.getElementById('profileProxy').value.trim();
     }
